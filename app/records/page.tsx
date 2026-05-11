@@ -1,0 +1,675 @@
+"use client"
+
+import { useState, useEffect, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
+import { createClient } from "@/utils/supabase"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { Plus, X, Fuel, Wrench, Settings, Receipt, Shield, FileText, CarFront, Pencil, Trash2, Ticket } from "lucide-react"
+import Link from "next/link"
+import { toast } from "sonner"
+import { useTranslation } from "@/lib/i18n"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import RecurringTab from "@/components/RecurringTab"
+
+export const CATEGORIES: Record<string, any> = {
+  fuel: { icon: Fuel, color: "text-blue-500", bg: "bg-blue-50" },
+  maintenance: { icon: Wrench, color: "text-orange-500", bg: "bg-orange-50" },
+  custom: { icon: Settings, color: "text-purple-500", bg: "bg-purple-50" },
+  highway: { icon: Ticket, color: "text-indigo-500", bg: "bg-indigo-50" },
+  tax: { icon: Receipt, color: "text-red-500", bg: "bg-red-50" },
+  insurance: { icon: Shield, color: "text-green-500", bg: "bg-green-50" },
+  other: { icon: FileText, color: "text-slate-500", bg: "bg-slate-50" },
+}
+
+export const SUB_CATEGORIES: Record<string, string[]> = {
+  maintenance:[
+    "オイル交換", "オイルフィルター交換", "タイヤ交換", "タイヤローテーション", 
+    "バッテリー交換", "スマートキー電池交換", "ワイパーゴム交換", "車検・法定点検", "洗車・コーティング", "その他"
+  ],
+  custom:[
+    "外装・エアロ", "内装・インテリア", "吸排気系（マフラー等）", 
+    "足回り（ホイール・車高調等）", "電装系（オーディオ等）", "その他"
+  ],
+  insurance: [
+    "自賠責保険", "任意保険", "その他"
+  ],
+  tax: [
+    "自動車税", "重量税", "その他"
+  ],
+  other: [
+    "駐車場・コインパーキング", "ローン・リース代", "カー用品・小物", "ロードサービス", "その他"
+  ]
+}
+
+// 給油フォーム内の自動計算ハンドラー（コンポーネント外に定義）
+type FuelCalcField = "amount" | "fuelUnitPrice" | "fuelAmount"
+
+// スケルトンUIコンポーネント
+const RecordSkeleton = () => (
+  <div className="space-y-4">
+    {[...Array(5)].map((_, i) => (
+      <div key={i} className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="p-4 flex gap-4 items-start">
+          {/* アイコン */}
+          <div className="w-12 h-12 rounded-full bg-slate-100 animate-pulse shrink-0 mt-1" />
+          <div className="flex-1 min-w-0 pr-14 space-y-2">
+            {/* 金額 */}
+            <div className="h-6 w-28 bg-slate-100 rounded-lg animate-pulse" />
+            {/* タグ */}
+            <div className="flex gap-2">
+              <div className="h-5 w-16 bg-slate-100 rounded-md animate-pulse" />
+              <div className="h-5 w-20 bg-slate-100 rounded-md animate-pulse" />
+            </div>
+            {/* 車名・ODO */}
+            <div className="h-4 w-36 bg-slate-100 rounded animate-pulse" />
+            {/* 日付 */}
+            <div className="h-3 w-24 bg-slate-100 rounded animate-pulse" />
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+)
+
+// 新規追加 or 編集に使うフォームのJSX
+const RecordForm = ({ 
+  onSubmit, 
+  submitLabel,
+  resetForm,
+  editRecordId,
+  carId, setCarId,
+  cars,
+  category, setCategory,
+  subCategory, setSubCategory,
+  amount, setAmount,
+  date, setDate,
+  odoAtRecord, setOdoAtRecord,
+  fuelAmount, setFuelAmount,
+  fuelUnitPrice, setFuelUnitPrice,
+  memo, setMemo,
+  onFuelFieldChange,
+  entryIc, setEntryIc,
+  exitIc, setExitIc,
+}: any) => {
+  const { t } = useTranslation()
+  return (
+  <Card className="border-none shadow-lg bg-white">
+    <CardContent className="p-6 relative">
+      <Button variant="ghost" size="icon" className="absolute top-2 right-2 text-slate-400" onClick={resetForm}>
+        <X className="h-4 w-4" />
+      </Button>
+      <h2 className="text-xl font-extrabold text-slate-800 mb-6">
+        {editRecordId ? t("records.edit_record") : t("records.new_record")}
+      </h2>
+      
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label>{t("common.target_car")} <span className="text-red-500">{t("common.required")}</span></Label>
+            <Select value={carId} onValueChange={setCarId} required>
+              <SelectTrigger className="w-full"><SelectValue placeholder={t("common.select_car")} /></SelectTrigger>
+              <SelectContent>
+                {cars.map((car: any) => <SelectItem key={car.id} value={car.id}>{car.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>{t("records.category")} <span className="text-red-500">{t("common.required")}</span></Label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger className="w-full"><SelectValue placeholder={t("records.category")} /></SelectTrigger>
+              <SelectContent>
+                {Object.keys(CATEGORIES).map(key => (
+                  <SelectItem key={key} value={key}>{t(`categories.${key}`)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {SUB_CATEGORIES[category] && (
+          <div className="space-y-2 w-1/2 pr-1.5">
+            <Label>{t("records.subcategory")}</Label>
+            <Select value={subCategory} onValueChange={setSubCategory}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={t("common.please_select")} />
+              </SelectTrigger>
+              <SelectContent>
+                {SUB_CATEGORIES[category].map(sub => (
+                  <SelectItem key={sub} value={sub}>{t(`subcategories.${sub}`)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label>{t("records.date")} <span className="text-red-500">{t("common.required")}</span></Label>
+          <Input type="date" value={date} onChange={e => setDate(e.target.value)} required />
+        </div>
+
+        <div className="space-y-2">
+          <Label>{t("records.odometer_km")} <span className="text-slate-400 font-normal text-xs">{t("records.optional")}</span></Label>
+          <Input type="number" value={odoAtRecord} onChange={e => setOdoAtRecord(e.target.value)} placeholder="52500" />
+        </div>
+
+        {category === "fuel" ? (
+          <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4 space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Fuel size={15} className="text-slate-400" />
+              <span className="text-sm font-bold text-slate-600">{t("records.fuel_info")}</span>
+            </div>
+
+            {/* 単価 */}
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold text-slate-600">{t("records.unit_price")}</Label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  step="0.1"
+                  value={fuelUnitPrice}
+                  onChange={e => onFuelFieldChange("fuelUnitPrice", e.target.value)}
+                  placeholder="170"
+                  className="bg-white border-slate-200 focus:border-slate-400 pr-12 placeholder:text-slate-300"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">{t("records.unit_yen_per_l")}</span>
+              </div>
+            </div>
+
+            {/* リットル */}
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold text-slate-600">{t("records.fuel_amount")}</Label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={fuelAmount}
+                  onChange={e => onFuelFieldChange("fuelAmount", e.target.value)}
+                  placeholder="40.0"
+                  className="bg-white border-slate-200 focus:border-slate-400 pr-8 placeholder:text-slate-300"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">{t("records.unit_l")}</span>
+              </div>
+            </div>
+
+            {/* 区切り線 */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-px bg-slate-200" />
+              <span className="text-[10px] text-slate-400 font-bold">=</span>
+              <div className="flex-1 h-px bg-slate-200" />
+            </div>
+
+            {/* 総額 */}
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold text-slate-600">{t("records.total_amount")} <span className="text-red-400">{t("common.required")}</span></Label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  value={amount}
+                  onChange={e => onFuelFieldChange("amount", e.target.value)}
+                  required
+                  placeholder="6800"
+                  className="bg-white border-slate-200 focus:border-slate-400 font-bold text-slate-800 pr-8 placeholder:text-slate-300"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">{t("records.unit_yen")}</span>
+              </div>
+            </div>
+          </div>
+        ) : category === "highway" ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{t("records.entry_ic")} <span className="text-slate-400 font-normal text-[10px]">{t("records.optional")}</span></Label>
+                <Input type="text" value={entryIc} onChange={e => setEntryIc(e.target.value)} placeholder="" className="placeholder:text-slate-300" />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("records.exit_ic")} <span className="text-slate-400 font-normal text-[10px]">{t("records.optional")}</span></Label>
+                <Input type="text" value={exitIc} onChange={e => setExitIc(e.target.value)} placeholder="" className="placeholder:text-slate-300" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{t("records.amount_yen")} <span className="text-red-500">{t("common.required")}</span></Label>
+              <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} required placeholder="1320" className="placeholder:text-slate-300" />
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Label>{t("records.amount_yen")} <span className="text-red-500">{t("common.required")}</span></Label>
+            <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} required placeholder="5000" />
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label>{t("common.memo")}</Label>
+          <Textarea value={memo} onChange={e => setMemo(e.target.value)} placeholder={t("records.memo_placeholder")} className="resize-none" />
+        </div>
+
+        <div className="pt-4 flex justify-center">
+          <Button type="submit" className="px-12 font-bold">{submitLabel}</Button>
+        </div>
+      </form>
+    </CardContent>
+  </Card>
+)}
+
+function RecordsPageInner() {
+  const [cars, setCars] = useState<any[]>([])
+  const[records, setRecords] = useState<any[]>([])
+  const [isAdding, setIsAdding] = useState(false)
+  const [loading, setLoading] = useState(true)
+  // 編集モード用
+  const [editRecordId, setEditRecordId] = useState<string | null>(null)
+  const supabase = createClient()
+  const { t } = useTranslation()
+
+  const [carId, setCarId] = useState("")
+  const [category, setCategory] = useState("fuel")
+  const [subCategory, setSubCategory] = useState("")
+  const [amount, setAmount] = useState("")
+  const [odoAtRecord, setOdoAtRecord] = useState("")
+  const [fuelAmount, setFuelAmount] = useState("")
+  const [fuelUnitPrice, setFuelUnitPrice] = useState("")
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [memo, setMemo] = useState("")
+
+  // 高速料金用ステート
+  const [entryIc, setEntryIc] = useState("")
+  const [exitIc, setExitIc] = useState("")
+
+  useEffect(() => {
+    if (SUB_CATEGORIES[category]) {
+      setSubCategory(SUB_CATEGORIES[category][0])
+    } else {
+      setSubCategory("")
+    }
+  }, [category])
+
+  const fetchData = async () => {
+    setLoading(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: carsData } = await supabase.from("cars").select("*").eq("user_id", user.id).eq("status", "active")
+      if (carsData) {
+        setCars(carsData)
+        if (carsData.length === 1) setCarId(carsData[0].id)
+      }
+
+      const { data: recordsData } = await supabase
+        .from("records")
+        .select(`*, cars(name)`)
+        .eq("user_id", user.id)
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false })
+      if (recordsData) setRecords(recordsData)
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => { fetchData() },[])
+
+  // URLパラメータで給油フォームを自動展開
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    if (!loading && searchParams.get("action") === "add") {
+      const cat = searchParams.get("category") || "fuel"
+      setCategory(cat)
+      setIsAdding(true)
+      // スクロールをページ上部へ
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    }
+  }, [loading])
+
+  // 給油フィールドの相互自動計算ハンドラー
+  const handleFuelFieldChange = (field: FuelCalcField, value: string) => {
+    const toNum = (v: string) => parseFloat(v)
+    if (field === "fuelUnitPrice") {
+      setFuelUnitPrice(value)
+      const price = toNum(value)
+      const liters = toNum(fuelAmount)
+      const total = toNum(amount)
+      if (!isNaN(price) && !isNaN(liters)) {
+        setAmount(Math.round(price * liters).toString())
+      } else if (!isNaN(price) && !isNaN(total)) {
+        setFuelAmount((total / price).toFixed(2))
+      }
+    } else if (field === "fuelAmount") {
+      setFuelAmount(value)
+      const liters = toNum(value)
+      const price = toNum(fuelUnitPrice)
+      const total = toNum(amount)
+      if (!isNaN(liters) && !isNaN(price)) {
+        setAmount(Math.round(liters * price).toString())
+      } else if (!isNaN(liters) && !isNaN(total)) {
+        setFuelUnitPrice((total / liters).toFixed(2))
+      }
+    } else if (field === "amount") {
+      setAmount(value)
+      const total = toNum(value)
+      const price = toNum(fuelUnitPrice)
+      const liters = toNum(fuelAmount)
+      if (!isNaN(total) && !isNaN(price)) {
+        setFuelAmount((total / price).toFixed(2))
+      } else if (!isNaN(total) && !isNaN(liters)) {
+        setFuelUnitPrice((total / liters).toFixed(2))
+      }
+    }
+  }
+
+  // フォームのリセット
+  const resetForm = () => {
+    setIsAdding(false)
+    setEditRecordId(null)
+    setAmount(""); setOdoAtRecord(""); setFuelAmount(""); setFuelUnitPrice(""); setMemo("")
+    setEntryIc(""); setExitIc("")
+    setCategory("fuel")
+    const firstCarId = cars.length === 1 ? cars[0].id : ""
+    setCarId(firstCarId)
+  }
+
+  // 記録データの保存処理
+  const handleAddRecord = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!carId) return alert(t("records.select_car_alert"))
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const targetCar = cars.find(c => c.id === carId)
+    const fallbackOdo = targetCar ? targetCar.current_odo : 0
+
+    let finalMemo = memo
+    if (category === "highway" && (entryIc || exitIc)) {
+      finalMemo = `${t("records.route_label")}${entryIc || t("records.not_entered")} ➡ ${exitIc || t("records.not_entered")}\n${memo}`
+    }
+
+    const { error: recordError } = await supabase.from("records").insert({
+      user_id: user.id,
+      car_id: carId,
+      category,
+      sub_category: subCategory || null,
+      amount: parseInt(amount),
+      odo_at_record: odoAtRecord ? parseInt(odoAtRecord) : fallbackOdo,
+      fuel_amount: category === "fuel" ? parseFloat(fuelAmount) : null,
+      date,
+      memo: finalMemo,
+    })
+
+    if (recordError) return toast.error(t("common.error_occurred") + ": " + recordError.message)
+
+    if (targetCar && odoAtRecord && parseInt(odoAtRecord) > targetCar.current_odo) {
+      await supabase.from("cars").update({ current_odo: parseInt(odoAtRecord) }).eq("id", carId)
+    }
+
+    toast.success(t("records.saved"))
+    resetForm()
+    fetchData()
+  }
+
+  // 記録編集モードの開始
+  const handleStartEdit = (record: any) => {
+    setEditRecordId(record.id)
+    setIsAdding(false)
+    setCarId(record.car_id)
+    setCategory(record.category)
+    setSubCategory(record.sub_category || "")
+    setAmount(String(record.amount))
+    setOdoAtRecord(record.odo_at_record ? String(record.odo_at_record) : "")
+    const liters = record.fuel_amount ? parseFloat(record.fuel_amount) : null
+    const total = record.amount ? record.amount : null
+    setFuelAmount(liters ? String(liters) : "")
+    setFuelUnitPrice(liters && total ? (total / liters).toFixed(2) : "")
+    setDate(record.date)
+    
+    // 高速料金のメモ復元処理
+    if (record.category === "highway" && record.memo) {
+      const match = record.memo.match(/^【区間】(.*?) ➡ (.*?)\n([\s\S]*)$/)
+      if (match) {
+        setEntryIc(match[1] === "未入力" ? "" : match[1])
+        setExitIc(match[2] === "未入力" ? "" : match[2])
+        setMemo(match[3])
+      } else {
+        const fallbackMatch = record.memo.match(/^【区間】(.*?) ➡ (.*?)$/)
+        if (fallbackMatch) {
+          setEntryIc(fallbackMatch[1] === "未入力" ? "" : fallbackMatch[1])
+          setExitIc(fallbackMatch[2] === "未入力" ? "" : fallbackMatch[2])
+          setMemo("")
+        } else {
+          // Try English format too
+          const enMatch = record.memo.match(/^Route: (.*?) ➡ (.*?)\n([\s\S]*)$/)
+          if (enMatch) {
+            setEntryIc(enMatch[1] === "N/A" ? "" : enMatch[1])
+            setExitIc(enMatch[2] === "N/A" ? "" : enMatch[2])
+            setMemo(enMatch[3])
+          } else {
+            setEntryIc("")
+            setExitIc("")
+            setMemo(record.memo)
+          }
+        }
+      }
+    } else {
+      setEntryIc("")
+      setExitIc("")
+      setMemo(record.memo || "")
+    }
+  }
+
+  // 記録データの更新処理
+  const handleUpdateRecord = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editRecordId) return
+
+    const targetCar = cars.find(c => c.id === carId)
+    const fallbackOdo = targetCar ? targetCar.current_odo : 0
+
+    let finalMemo = memo
+    if (category === "highway" && (entryIc || exitIc)) {
+      finalMemo = `${t("records.route_label")}${entryIc || t("records.not_entered")} ➡ ${exitIc || t("records.not_entered")}\n${memo}`
+    }
+
+    const { error } = await supabase.from("records").update({
+      car_id: carId,
+      category,
+      sub_category: subCategory || null,
+      amount: parseInt(amount),
+      odo_at_record: odoAtRecord ? parseInt(odoAtRecord) : fallbackOdo,
+      fuel_amount: category === "fuel" ? parseFloat(fuelAmount) : null,
+      date,
+      memo: finalMemo,
+    }).eq("id", editRecordId)
+
+    if (error) {
+      toast.error(t("common.error_occurred") + ": " + error.message)
+    } else {
+      toast.success(t("records.updated"))
+      resetForm()
+      fetchData()
+    }
+  }
+
+  // 記録データの削除処理
+  const handleDeleteRecord = async (recordId: string) => {
+    const confirmed = window.confirm(t("records.confirm_delete"))
+    if (!confirmed) return
+
+    const { error } = await supabase.from("records").delete().eq("id", recordId)
+    if (error) {
+      toast.error(t("common.delete_failed") + ": " + error.message)
+    } else {
+      toast.success(t("records.deleted"))
+      fetchData()
+    }
+  }
+
+
+  return (
+    <main className="p-4 space-y-6">
+      <header className="pt-4 pb-2">
+        <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">{t("records.title")}</h1>
+      </header>
+
+      {loading && <RecordSkeleton />}
+
+      {!loading && cars.length === 0 && (
+        <Card className="border-none shadow-sm bg-white p-10 text-center mt-10">
+          <CarFront className="mx-auto h-12 w-12 text-slate-300 mb-3" />
+          <p className="text-slate-500 font-medium mb-4">{t("records.register_car_first_line1")}<br/>{t("records.register_car_first_line2")}</p>
+          <Link href="/garage"><Button className="font-bold">{t("records.go_to_garage")}</Button></Link>
+        </Card>
+      )}
+
+      {!loading && cars.length > 0 && (
+        <Tabs defaultValue="manual" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="manual" className="font-bold">{t("records.tab_manual")}</TabsTrigger>
+            <TabsTrigger value="recurring" className="font-bold">{t("records.tab_recurring")}</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="manual" className="space-y-6 outline-none">
+            <div className="flex justify-end">
+              {!isAdding && !editRecordId && (
+                <Button onClick={() => setIsAdding(true)} size="sm" className="font-bold">
+                  <Plus className="mr-1 h-4 w-4" /> {t("records.add_record")}
+                </Button>
+              )}
+            </div>
+
+      {isAdding && <RecordForm 
+          onSubmit={handleAddRecord} 
+          submitLabel={t("records.save_record")}
+          resetForm={resetForm}
+          editRecordId={editRecordId}
+          carId={carId} setCarId={setCarId}
+          cars={cars}
+          category={category} setCategory={setCategory}
+          subCategory={subCategory} setSubCategory={setSubCategory}
+          amount={amount} setAmount={setAmount}
+          date={date} setDate={setDate}
+          odoAtRecord={odoAtRecord} setOdoAtRecord={setOdoAtRecord}
+          fuelAmount={fuelAmount} setFuelAmount={setFuelAmount}
+          fuelUnitPrice={fuelUnitPrice} setFuelUnitPrice={setFuelUnitPrice}
+          memo={memo} setMemo={setMemo}
+          onFuelFieldChange={handleFuelFieldChange}
+          entryIc={entryIc} setEntryIc={setEntryIc}
+          exitIc={exitIc} setExitIc={setExitIc}
+      />}
+      {editRecordId && <RecordForm 
+          onSubmit={handleUpdateRecord} 
+          submitLabel={t("common.update")}
+          resetForm={resetForm}
+          editRecordId={editRecordId}
+          carId={carId} setCarId={setCarId}
+          cars={cars}
+          category={category} setCategory={setCategory}
+          subCategory={subCategory} setSubCategory={setSubCategory}
+          amount={amount} setAmount={setAmount}
+          date={date} setDate={setDate}
+          odoAtRecord={odoAtRecord} setOdoAtRecord={setOdoAtRecord}
+          fuelAmount={fuelAmount} setFuelAmount={setFuelAmount}
+          fuelUnitPrice={fuelUnitPrice} setFuelUnitPrice={setFuelUnitPrice}
+          memo={memo} setMemo={setMemo}
+          onFuelFieldChange={handleFuelFieldChange}
+          entryIc={entryIc} setEntryIc={setEntryIc}
+          exitIc={exitIc} setExitIc={setExitIc}
+      />}
+
+      {!loading && !isAdding && !editRecordId && records.length === 0 && cars.length > 0 && (
+        <p className="text-center text-slate-500 py-20">{t("records.no_records_line1")}<br/>{t("records.no_records_line2")}</p>
+      )}
+
+      {!loading && !isAdding && !editRecordId && records.length > 0 && (
+        <div className="space-y-4">
+          {records.map((record) => {
+            const cat = CATEGORIES[record.category] || CATEGORIES.other
+            const Icon = cat.icon
+            
+            return (
+              <Card key={record.id} className="border-none shadow-sm bg-white overflow-hidden relative">
+                <CardContent className="p-0">
+                  {/* 編集・削除ボタン（右上に常時表示） */}
+                  <div className="absolute top-3 right-3 flex items-center gap-1">
+                    <button
+                      onClick={() => handleStartEdit(record)}
+                      className="p-1.5 rounded-lg text-slate-300 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+                      title={t("common.edit")}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteRecord(record.id)}
+                      className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                      title={t("common.delete")}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+
+                  <div className="p-4 flex gap-4 items-start">
+                    <div className={`p-3 rounded-full shrink-0 mt-1 ${cat.bg} ${cat.color}`}>
+                      <Icon size={24} />
+                    </div>
+                    <div className="flex-1 min-w-0 pr-14">
+                      {/* 金額 */}
+                      <h3 className="font-bold text-slate-800 text-lg mb-1">¥{record.amount.toLocaleString()}</h3>
+                      
+                      {/* ジャンルタグ */}
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 mb-2 flex-wrap">
+                        <span className="bg-slate-100 px-2 py-1 rounded-md">{t(`categories.${record.category}`)}</span>
+                        {record.sub_category && (
+                          <span className="border border-slate-200 text-slate-600 px-2 py-1 rounded-md">
+                            {t(`subcategories.${record.sub_category}`)}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* 車名・走行距離 */}
+                      <div className="flex items-center gap-3 text-[11px] text-slate-500 mb-1">
+                        <span className="font-bold">{record.cars.name}</span>
+                        {record.odo_at_record != null && (
+                          <span>{record.odo_at_record.toLocaleString()} {t("common.km_unit")}</span>
+                        )}
+                      </div>
+
+                      {/* 日付 */}
+                      <p className="text-[11px] font-medium text-slate-400 mb-2">{record.date.replace(/-/g, '/')}</p>
+
+                      {record.category === "fuel" && record.fuel_amount && (
+                        <p className="text-xs text-slate-500 mb-2">
+                          {t("records.fuel_amount_label")} <span className="font-bold text-slate-700">{record.fuel_amount} L</span>
+                        </p>
+                      )}
+                      {record.memo && (
+                        <p className="text-sm text-slate-600 bg-slate-50 p-2 rounded-md whitespace-pre-wrap inline-block">
+                          {record.memo}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
+          </TabsContent>
+
+          <TabsContent value="recurring" className="outline-none">
+            <RecurringTab cars={cars} />
+          </TabsContent>
+        </Tabs>
+      )}
+    </main>
+  )
+}
+
+export default function RecordsPage() {
+  return (
+    <Suspense>
+      <RecordsPageInner />
+    </Suspense>
+  )
+}
