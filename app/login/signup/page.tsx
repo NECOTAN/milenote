@@ -110,16 +110,7 @@ export default function SignUpPage() {
       )}
 
       <div className="w-full max-w-sm">
-        {/* 戻るボタン */}
-        <button
-          onClick={() => router.push("/login")}
-          className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-600 transition-colors mb-6"
-        >
-          <ArrowLeft size={16} />
-          <span className="font-bold text-xs">{t("signup.back_to_login")}</span>
-        </button>
-
-        <div className="space-y-1 mb-6">
+        <div className="space-y-1 mb-6 text-center">
           <h1 className="text-2xl font-bold">Milenote</h1>
           <p className="text-sm text-slate-500">{t("signup.subtitle")}</p>
         </div>
@@ -186,11 +177,19 @@ export default function SignUpPage() {
             </div>
           </div>
 
-          {/* 登録ボタン */}
-          <div className="flex flex-col items-center gap-3 pt-2">
+          {/* 登録ボタンと戻るボタン */}
+          <div className="flex flex-col items-center gap-4 pt-4">
             <Button className="font-bold min-w-[200px]" type="submit" disabled={loading}>
               {loading ? t("login.processing") : t("signup.create_account")}
             </Button>
+            <button
+              type="button"
+              onClick={() => router.push("/login")}
+              className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <ArrowLeft size={16} />
+              <span className="font-bold text-xs">{t("signup.back_to_login")}</span>
+            </button>
           </div>
         </form>
       </div>
