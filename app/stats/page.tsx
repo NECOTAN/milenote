@@ -34,35 +34,35 @@ function PeriodFilter({
   labelFrom: string; labelTo: string; labelReset: string
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 px-4 pb-3">
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1.5 text-slate-500">
-          <CalendarDays size={16} />
-          <span className="text-sm font-semibold">{labelFrom}</span>
+    <div className="flex flex-wrap items-center gap-2 px-4 pb-3">
+      <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 text-slate-500">
+          <CalendarDays size={14} />
+          <span className="text-xs font-semibold">{labelFrom}</span>
         </div>
         <input
           type="date"
           value={start}
           onChange={e => onStartChange(e.target.value)}
-          className="text-sm border border-slate-200 rounded-lg px-2 py-1 text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition-all min-w-[140px]"
+          className="text-xs border border-slate-200 rounded-md px-1.5 py-1 text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-400 transition-all w-[110px]"
         />
       </div>
       
-      <div className="flex items-center gap-2">
-        <span className="text-slate-300">—</span>
-        <span className="text-sm font-semibold text-slate-500">{labelTo}</span>
+      <div className="flex items-center gap-1.5">
+        <span className="text-slate-300 text-xs">—</span>
+        <span className="text-xs font-semibold text-slate-500">{labelTo}</span>
         <input
           type="date"
           value={end}
           onChange={e => onEndChange(e.target.value)}
-          className="text-sm border border-slate-200 rounded-lg px-2 py-1 text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition-all min-w-[140px]"
+          className="text-xs border border-slate-200 rounded-md px-1.5 py-1 text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-400 transition-all w-[110px]"
         />
       </div>
       
       {(start || end) && (
         <button
           onClick={onReset}
-          className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-red-400 transition-colors px-2 py-1.5 rounded-lg hover:bg-red-50 ml-auto"
+          className="flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-red-400 transition-colors px-2 py-1 rounded hover:bg-red-50 ml-auto"
         >
           <RotateCcw size={12} />
           {labelReset}
@@ -345,9 +345,7 @@ export default function StatsPage() {
                     <XAxis dataKey="month" fontSize={10} axisLine={false} tickLine={false} dy={10} tick={{ fill: '#94a3b8' }} tickFormatter={monthFormatter} padding={{ left: 30, right: 30 }} />
                     <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} width={65} domain={[0, 'auto']} tickFormatter={(v: any) => v.toLocaleString()} />
                     <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={(value: any) => [`¥${Number(value).toLocaleString()}`, t("stats.expenditure")]} />
-                    <Line type="linear" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}>
-                      <LabelList dataKey="amount" position="top" offset={15} fontSize={10} fontWeight="bold" fill="#64748b" formatter={(v: any) => Number(v) > 0 ? `¥${Number(v).toLocaleString()}` : ''} />
-                    </Line>
+                    <Line type="linear" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} />
                   </LineChart>
                 ) : (
                   <BarChart data={monthlyData} margin={{ top: 40, right: 30, left: 10, bottom: 20 }} barCategoryGap="30%">
@@ -355,9 +353,7 @@ export default function StatsPage() {
                     <XAxis dataKey="month" fontSize={10} axisLine={false} tickLine={false} dy={10} tick={{ fill: '#94a3b8' }} tickFormatter={monthFormatter} />
                     <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} width={65} tickFormatter={(v: any) => v.toLocaleString()} />
                     <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={(value: any) => [`¥${Number(value).toLocaleString()}`, t("stats.expenditure")]} />
-                    <Bar dataKey="amount" radius={[4, 4, 0, 0]} fill="#3b82f6">
-                      <LabelList dataKey="amount" position="top" offset={10} fontSize={10} fontWeight="bold" fill="#64748b" formatter={(v: any) => Number(v) > 0 ? `¥${Number(v).toLocaleString()}` : ''} />
-                    </Bar>
+                    <Bar dataKey="amount" radius={[4, 4, 0, 0]} fill="#3b82f6" />
                   </BarChart>
                 )}
               </ResponsiveContainer>
@@ -439,17 +435,7 @@ export default function StatsPage() {
                   formatter={(value: any) => [`¥${Number(value).toLocaleString()}`, t("stats.expenditure")]}
                   labelFormatter={(label: any) => yearlyMonthFormatter(label)}
                 />
-                <Line type="linear" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}>
-                  <LabelList
-                    dataKey="amount"
-                    position="top"
-                    offset={10}
-                    fontSize={9}
-                    fontWeight="bold"
-                    fill="#94a3b8"
-                    formatter={(v: any) => Number(v) > 0 ? `¥${Number(v).toLocaleString()}` : ''}
-                  />
-                </Line>
+                <Line type="linear" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} />
               </LineChart>
             ) : (
               <BarChart data={yearlyData} margin={{ top: 20, right: 16, left: 8, bottom: 4 }} barCategoryGap="30%">
@@ -485,14 +471,6 @@ export default function StatsPage() {
                       fillOpacity={entry.amount > 0 ? 1 : 0.6}
                     />
                   ))}
-                  <LabelList
-                    dataKey="amount"
-                    position="top"
-                    fontSize={9}
-                    fontWeight="bold"
-                    fill="#94a3b8"
-                    formatter={(v: any) => Number(v) > 0 ? `¥${Number(v).toLocaleString()}` : ''}
-                  />
                 </Bar>
               </BarChart>
             )}
