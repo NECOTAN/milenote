@@ -8,10 +8,10 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, LabelList,
   BarChart, Bar
 } from "recharts"
-import { Globe, Moon, PieChart as PieIcon, BarChart3, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, LineChart as LineChartIcon } from "lucide-react"
+import { Globe, Moon, PieChart as PieIcon, BarChart3, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, LineChart as LineChartIcon, Palette } from "lucide-react"
 import { useTranslation } from "@/lib/i18n"
 
-const CATEGORY_MAP: Record<string, { color: string }> = {
+const CATEGORY_MAP_COLORFUL: Record<string, { color: string }> = {
   fuel: { color: "#3b82f6" },
   maintenance: { color: "#f97316" },
   custom: { color: "#a855f7" },
@@ -19,6 +19,16 @@ const CATEGORY_MAP: Record<string, { color: string }> = {
   tax: { color: "#ef4444" },
   insurance: { color: "#22c55e" },
   other: { color: "#64748b" },
+}
+
+const CATEGORY_MAP_BLUE: Record<string, { color: string }> = {
+  fuel: { color: "#1e3a8a" },
+  maintenance: { color: "#1e40af" },
+  custom: { color: "#1d4ed8" },
+  highway: { color: "#2563eb" },
+  tax: { color: "#3b82f6" },
+  insurance: { color: "#60a5fa" },
+  other: { color: "#93c5fd" },
 }
 
 // 期間フィルターUIコンポーネント
@@ -86,6 +96,7 @@ export default function StatsPage() {
   const [monthEnd, setMonthEnd] = useState("")
   const [monthlyChartType, setMonthlyChartType] = useState<"line" | "bar">("line")
   const [yearlyChartType, setYearlyChartType] = useState<"line" | "bar">("bar")
+  const [isColorful, setIsColorful] = useState(false)
 
   // 年次統計用
   const currentYear = new Date().getFullYear()
@@ -114,6 +125,9 @@ export default function StatsPage() {
 
       const savedYearly = localStorage.getItem("milenote_yearly_chart") as "line" | "bar"
       if (savedYearly) setYearlyChartType(savedYearly)
+
+      const savedColorful = localStorage.getItem("milenote_colorful_pie") === "true"
+      setIsColorful(savedColorful)
 
       setLoading(false)
     }
@@ -149,9 +163,16 @@ export default function StatsPage() {
     localStorage.setItem("milenote_yearly_chart", nextType)
   }
 
+  const toggleColorful = () => {
+    const nextVal = !isColorful
+    setIsColorful(nextVal)
+    localStorage.setItem("milenote_colorful_pie", String(nextVal))
+  }
+
   // データ集計処理
+  const activeCategoryMap = isColorful ? CATEGORY_MAP_COLORFUL : CATEGORY_MAP_BLUE
   const categoryData = catFilteredRecords.reduce((acc: any[], curr) => {
-    const config = CATEGORY_MAP[curr.category] || CATEGORY_MAP.other
+    const config = activeCategoryMap[curr.category] || activeCategoryMap.other
     const label = t(`categories.${curr.category}`)
     const found = acc.find(a => a.name === label)
     if (found) found.value += curr.amount
@@ -273,10 +294,18 @@ export default function StatsPage() {
 
         {/* カテゴリ別内訳 */}
         <Card className="border-none shadow-sm bg-white">
-          <CardHeader className="p-4 pb-0">
+          <CardHeader className="p-4 pb-0 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-600">
               <PieIcon size={16} /> {t("stats.category_breakdown")}
             </CardTitle>
+            <button 
+              onClick={toggleColorful}
+              className={`p-1.5 rounded-lg transition-colors ${isColorful ? 'text-blue-500 bg-blue-50' : 'text-slate-400 hover:text-blue-500 hover:bg-blue-50'}`}
+              aria-label="Toggle colorful pie chart"
+              title="カラー切り替え"
+            >
+              <Palette size={16} />
+            </button>
           </CardHeader>
           <PeriodFilter
             start={catStart} end={catEnd}
