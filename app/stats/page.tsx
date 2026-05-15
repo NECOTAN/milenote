@@ -31,6 +31,33 @@ const CATEGORY_MAP_BLUE: Record<string, { color: string }> = {
   other: { color: "#cbd5e1" },
 }
 
+const renderCustomizedLabel = (props: any) => {
+  const { x, y, percent, value, textAnchor } = props;
+  
+  const formatValue = (val: number) => {
+    if (val >= 10000) {
+      return `¥${(val / 10000).toFixed(1).replace(/\.0$/, '')}万`;
+    }
+    return `¥${val.toLocaleString()}`;
+  };
+
+  if (percent < 0.01) return null;
+
+  return (
+    <text 
+      x={x} 
+      y={y} 
+      fill="#64748b" 
+      textAnchor={textAnchor} 
+      dominantBaseline="central" 
+      fontSize={10} 
+      fontWeight="500"
+    >
+      {`${formatValue(value)} (${(percent * 100).toFixed(1)}%)`}
+    </text>
+  );
+};
+
 // 期間フィルターUIコンポーネント
 function PeriodFilter({
   start, end,
@@ -324,7 +351,7 @@ export default function StatsPage() {
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={categoryData} cx="50%" cy="45%" innerRadius={70} outerRadius={95} dataKey="value" stroke="#ffffff" strokeWidth={2} strokeLinejoin="round">
+                  <Pie data={categoryData} cx="50%" cy="45%" innerRadius={60} outerRadius={80} dataKey="value" stroke="#ffffff" strokeWidth={2} strokeLinejoin="round" label={renderCustomizedLabel} labelLine={{ stroke: '#cbd5e1', strokeWidth: 1 }}>
                     {categoryData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
                     <Label value={`¥${totalAmount.toLocaleString()}`} position="center" className="text-xl font-black fill-slate-800" />
                     <Label value={t("stats.total")} position="center" dy={20} className="text-[10px] font-bold fill-slate-400" />
