@@ -31,12 +31,18 @@ const CATEGORY_MAP_BLUE: Record<string, { color: string }> = {
   other: { color: "#cbd5e1" },
 }
 
-const renderCustomizedLabel = (props: any) => {
+const createCustomizedLabel = (t: any, locale: string) => (props: any) => {
   const { x, y, percent, value, textAnchor } = props;
   
   const formatValue = (val: number) => {
+    if (locale === "en") {
+      if (val >= 1000) {
+        return `¥${(val / 1000).toFixed(1).replace(/\.0$/, '')}${t("stats.unit_k")}`;
+      }
+      return `¥${val.toLocaleString()}`;
+    }
     if (val >= 10000) {
-      return `¥${(val / 10000).toFixed(1).replace(/\.0$/, '')}万`;
+      return `¥${(val / 10000).toFixed(1).replace(/\.0$/, '')}${t("stats.unit_ten_thousand")}`;
     }
     return `¥${val.toLocaleString()}`;
   };
@@ -351,7 +357,7 @@ export default function StatsPage() {
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={categoryData} cx="50%" cy="45%" innerRadius={60} outerRadius={80} dataKey="value" stroke="#ffffff" strokeWidth={2} strokeLinejoin="round" label={renderCustomizedLabel} labelLine={{ stroke: '#cbd5e1', strokeWidth: 1 }}>
+                  <Pie data={categoryData} cx="50%" cy="45%" innerRadius={60} outerRadius={80} dataKey="value" stroke="#ffffff" strokeWidth={2} strokeLinejoin="round" label={createCustomizedLabel(t, locale)} labelLine={{ stroke: '#cbd5e1', strokeWidth: 1 }}>
                     {categoryData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
                     <Label value={`¥${totalAmount.toLocaleString()}`} position="center" className="text-xl font-black fill-slate-800" />
                     <Label value={t("stats.total")} position="center" dy={20} className="text-[10px] font-bold fill-slate-400" />

@@ -189,7 +189,9 @@
     "reset_filter": "Reset",
     "no_data": "No data",
     "yearly_stats": "Yearly Stats",
-    "yearly_total": "Annual Total"
+    "yearly_total": "Annual Total",
+    "unit_k": "k",
+    "unit_ten_thousand": "万"
   },
   "mypage": {
     "title": "My Page",

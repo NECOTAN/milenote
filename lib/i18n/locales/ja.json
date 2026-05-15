@@ -189,7 +189,9 @@
     "reset_filter": "リセット",
     "no_data": "データがありません",
     "yearly_stats": "年別統計",
-    "yearly_total": "年間合計"
+    "yearly_total": "年間合計",
+    "unit_k": "k",
+    "unit_ten_thousand": "万"
   },
   "mypage": {
     "title": "マイページ",
