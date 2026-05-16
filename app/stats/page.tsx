@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { createClient } from "@/utils/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { 
+import {
   PieChart, Pie, Cell, ResponsiveContainer, Label, Legend,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, LabelList,
   BarChart, Bar
@@ -33,16 +33,20 @@ const CATEGORY_MAP_BLUE: Record<string, { color: string }> = {
 
 const createCustomizedLabel = (t: any, locale: string) => (props: any) => {
   const { x, y, percent, value, textAnchor } = props;
-  
+
   const formatValue = (val: number) => {
+    const truncateToOneDecimal = (num: number, divisor: number) => {
+      return (Math.floor(num / (divisor / 10)) / 10).toString();
+    };
+
     if (locale === "en") {
       if (val >= 1000) {
-        return `¥${(val / 1000).toFixed(1).replace(/\.0$/, '')}${t("stats.unit_k")}`;
+        return `¥${truncateToOneDecimal(val, 1000)}${t("stats.unit_k")}`;
       }
       return `¥${val.toLocaleString()}`;
     }
     if (val >= 10000) {
-      return `¥${(val / 10000).toFixed(1).replace(/\.0$/, '')}${t("stats.unit_ten_thousand")}`;
+      return `¥${truncateToOneDecimal(val, 10000)}${t("stats.unit_ten_thousand")}`;
     }
     return `¥${val.toLocaleString()}`;
   };
@@ -50,13 +54,13 @@ const createCustomizedLabel = (t: any, locale: string) => (props: any) => {
   if (percent < 0.01) return null;
 
   return (
-    <text 
-      x={x} 
-      y={y} 
-      fill="#64748b" 
-      textAnchor={textAnchor} 
-      dominantBaseline="central" 
-      fontSize={10} 
+    <text
+      x={x}
+      y={y}
+      fill="#64748b"
+      textAnchor={textAnchor}
+      dominantBaseline="central"
+      fontSize={10}
       fontWeight="500"
     >
       {`${formatValue(value)} (${(percent * 100).toFixed(1)}%)`}
@@ -90,7 +94,7 @@ function PeriodFilter({
           className="text-xs border border-slate-200 rounded-md px-1.5 py-1 text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-400 transition-all w-[110px]"
         />
       </div>
-      
+
       <div className="flex items-center gap-1.5">
         <span className="text-slate-300 text-xs">—</span>
         <span className="text-xs font-semibold text-slate-500">{labelTo}</span>
@@ -101,7 +105,7 @@ function PeriodFilter({
           className="text-xs border border-slate-200 rounded-md px-1.5 py-1 text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-300 focus:border-blue-400 transition-all w-[110px]"
         />
       </div>
-      
+
       {(start || end) && (
         <button
           onClick={onReset}
@@ -231,7 +235,7 @@ export default function StatsPage() {
     const amount = yearFilteredRecords
       .filter(r => r.date.startsWith(monthStr))
       .reduce((sum, r) => sum + r.amount, 0)
-    
+
     // 現在の年で未来の月の場合は null にする（線や点を描画しない）
     const isFuture = selectedYear === currentYear && month > currentMonth
     return { month, monthStr, amount: isFuture ? null : amount }
@@ -250,7 +254,7 @@ export default function StatsPage() {
   const monthFormatter = (v: string) => {
     const monthNum = parseInt(v.split('-')[1], 10)
     if (locale === "en") {
-      const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+      const names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
       return names[monthNum - 1]
     }
     return `${monthNum}月`
@@ -258,7 +262,7 @@ export default function StatsPage() {
 
   const yearlyMonthFormatter = (m: number) => {
     if (locale === "en") {
-      const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+      const names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
       return names[m - 1]
     }
     return `${m}月`
@@ -312,8 +316,8 @@ export default function StatsPage() {
               <span className="text-sm font-black text-slate-800">{moonPercent}%</span>
             </div>
             <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-              <div 
-                className="bg-gradient-to-r from-blue-500 to-purple-500 h-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)]" 
+              <div
+                className="bg-gradient-to-r from-blue-500 to-purple-500 h-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)]"
                 style={{ width: `${moonPercent}%` }}
               ></div>
             </div>
@@ -331,7 +335,7 @@ export default function StatsPage() {
             <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-600">
               <PieIcon size={16} /> {t("stats.category_breakdown")}
             </CardTitle>
-            <button 
+            <button
               onClick={toggleColorful}
               className={`p-1.5 rounded-lg transition-colors ${isColorful ? 'text-blue-500 bg-blue-50' : 'text-slate-400 hover:text-blue-500 hover:bg-blue-50'}`}
               aria-label="Toggle colorful pie chart"
@@ -376,7 +380,7 @@ export default function StatsPage() {
             <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-600">
               <BarChart3 size={16} /> {t("stats.monthly_trend")}
             </CardTitle>
-            <button 
+            <button
               onClick={toggleMonthlyChart}
               className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
               aria-label="Toggle chart type"
@@ -433,7 +437,7 @@ export default function StatsPage() {
             </CardTitle>
             {/* 年切替ナビとグラフ切り替えボタン */}
             <div className="flex items-center gap-3">
-              <button 
+              <button
                 onClick={toggleYearlyChart}
                 className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
                 aria-label="Toggle chart type"
