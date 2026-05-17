@@ -658,7 +658,7 @@ function RecordsPageInner() {
           </TabsContent>
 
           <TabsContent value="recurring" className="outline-none">
-            <RecurringTab cars={cars} />
+            <RecurringTab cars={cars} onRecordsChanged={fetchData} />
           </TabsContent>
         </Tabs>
       )}

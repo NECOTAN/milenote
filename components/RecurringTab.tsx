@@ -231,7 +231,7 @@ const EmptyState = ({ onAdd }: { onAdd: () => void }) => {
 }
 
 // メインコンポーネント (RecurringTab)
-export default function RecurringTab({ cars }: { cars: any[] }) {
+export default function RecurringTab({ cars, onRecordsChanged }: { cars: any[], onRecordsChanged?: () => void }) {
   const [costs, setCosts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isAdding, setIsAdding] = useState(false)
@@ -332,7 +332,7 @@ export default function RecurringTab({ cars }: { cars: any[] }) {
 
       // 過去分を自動記録
       if (pastDates.length > 0) {
-        const autoPrefix = t("records.auto_recorded") || "【自動記録】"
+        const autoPrefix = t("records.auto_recorded") || "自動記録"
         const targetCar = cars.find((c: any) => c.id === carId)
         const fallbackOdo = targetCar?.current_odo ?? 0
         let insertedCount = 0
@@ -348,6 +348,7 @@ export default function RecurringTab({ cars }: { cars: any[] }) {
           if (!recErr) insertedCount++
         }
         toast.success(`定期費用を登録しました。過去${insertedCount}件の記録を自動作成しました。`)
+        onRecordsChanged?.()
       } else {
         toast.success(t("records.recurring_saved"))
       }
