@@ -253,6 +253,9 @@ export default function RecurringTab({ cars, onRecordsChanged }: { cars: any[], 
     } else {
       setSubCategory("")
     }
+    if (!editId && ["tax", "insurance"].includes(category)) {
+      setFrequency("yearly")
+    }
   }, [category])
 
   const fetchData = async () => {
