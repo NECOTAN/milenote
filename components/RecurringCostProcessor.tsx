@@ -27,7 +27,7 @@ export default function RecurringCostProcessor() {
       // Fetch due recurring costs
       const { data: costs, error } = await supabase
         .from("recurring_costs")
-        .select("*")
+        .select("*, cars(current_odo)")
         .eq("user_id", user.id)
         .eq("is_active", true)
         .lte("next_billing_date", todayStr)
@@ -56,6 +56,7 @@ export default function RecurringCostProcessor() {
             category: cost.category,
             sub_category: cost.sub_category,
             amount: cost.amount,
+            odo_at_record: cost.cars?.current_odo ?? 0,
             date: currentNextDateStr,
             memo: finalMemo,
           })

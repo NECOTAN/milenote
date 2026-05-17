@@ -333,15 +333,21 @@ export default function RecurringTab({ cars }: { cars: any[] }) {
       // 過去分を自動記録
       if (pastDates.length > 0) {
         const autoPrefix = t("records.auto_recorded") || "【自動記録】"
+        const targetCar = cars.find((c: any) => c.id === carId)
+        const fallbackOdo = targetCar?.current_odo ?? 0
+        let insertedCount = 0
         for (const dateStr of pastDates) {
-          await supabase.from("records").insert({
+          const { error: recErr } = await supabase.from("records").insert({
             user_id: user.id, car_id: carId, category,
             sub_category: subCategory || null,
-            amount: parseInt(amount), date: dateStr,
+            amount: parseInt(amount),
+            odo_at_record: fallbackOdo,
+            date: dateStr,
             memo: `${autoPrefix}${memo || ""}`,
           })
+          if (!recErr) insertedCount++
         }
-        toast.success(`定期費用を登録しました。過去${pastDates.length}件の記録を自動作成しました。`)
+        toast.success(`定期費用を登録しました。過去${insertedCount}件の記録を自動作成しました。`)
       } else {
         toast.success(t("records.recurring_saved"))
       }
