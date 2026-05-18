@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { createClient } from "@/utils/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -62,6 +62,7 @@ const createCustomizedLabel = (t: any, locale: string) => (props: any) => {
       dominantBaseline="central"
       fontSize={10}
       fontWeight="500"
+      style={{ animation: "pieLabelFadeIn 0.75s ease-out forwards" }}
     >
       {`${formatValue(value)} (${(percent * 100).toFixed(1)}%)`}
     </text>
@@ -134,6 +135,11 @@ export default function StatsPage() {
   const [monthlyChartType, setMonthlyChartType] = useState<"line" | "bar">("line")
   const [yearlyChartType, setYearlyChartType] = useState<"line" | "bar">("bar")
   const [isColorful, setIsColorful] = useState(false)
+
+  // 円グラフアニメーション
+  const [pieAnimKey, setPieAnimKey] = useState(0)
+  const hasAnimatedPie = useRef(false)
+  const isFirstCatFilter = useRef(true)
 
   // 年次統計用
   const currentYear = new Date().getFullYear()
@@ -218,6 +224,20 @@ export default function StatsPage() {
   }, [])
 
   const totalAmount = catFilteredRecords.reduce((sum, r) => sum + r.amount, 0)
+
+  // 初回データロード時にアニメーション
+  useEffect(() => {
+    if (categoryData.length > 0 && !hasAnimatedPie.current) {
+      hasAnimatedPie.current = true
+      setPieAnimKey(k => k + 1)
+    }
+  }, [categoryData.length])
+
+  // 期間フィルター変更時にアニメーション（初回マウント時はスキップ）
+  useEffect(() => {
+    if (isFirstCatFilter.current) { isFirstCatFilter.current = false; return }
+    setPieAnimKey(k => k + 1)
+  }, [catStart, catEnd])
 
   const monthlyData = monthFilteredRecords.reduce((acc: any[], curr) => {
     const month = curr.date.substring(0, 7)
@@ -359,17 +379,43 @@ export default function StatsPage() {
                 <p className="text-sm font-medium">{t("stats.no_data")}</p>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={categoryData} cx="50%" cy="45%" innerRadius={60} outerRadius={80} dataKey="value" stroke="#ffffff" strokeWidth={2} strokeLinejoin="round" label={createCustomizedLabel(t, locale)} labelLine={{ stroke: '#cbd5e1', strokeWidth: 1 }}>
-                    {categoryData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
-                    <Label value={`¥${totalAmount.toLocaleString()}`} position="center" className="text-xl font-black fill-slate-800" />
-                    <Label value={t("stats.total")} position="center" dy={20} className="text-[10px] font-bold fill-slate-400" />
-                  </Pie>
-                  <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={(value: any) => [`¥${Number(value).toLocaleString()}`, t("stats.amount")]} />
-                  <Legend verticalAlign="bottom" height={36} iconType="circle" formatter={(value: any) => <span className="text-xs font-bold text-slate-600 mr-2">{value}</span>} />
-                </PieChart>
-              </ResponsiveContainer>
+              <>
+                <style>{`
+                  @keyframes pieRotateIn {
+                    from { transform: rotate(-180deg); opacity: 0; }
+                    to   { transform: rotate(0deg);   opacity: 1; }
+                  }
+                  @keyframes pieLabelFadeIn {
+                    0%,  40% { opacity: 0; }
+                    100%     { opacity: 1; }
+                  }
+                  .pie-anim .recharts-layer.recharts-pie {
+                    transform-box: fill-box;
+                    transform-origin: center;
+                    animation: pieRotateIn 0.75s cubic-bezier(0.33, 1, 0.68, 1) forwards;
+                  }
+                  .pie-anim .recharts-label-list text,
+                  .pie-anim .recharts-layer.recharts-label text,
+                  .pie-anim .recharts-label-list line,
+                  .pie-anim .recharts-pie-label-line,
+                  .pie-anim .recharts-pie-label-line path {
+                    animation: pieLabelFadeIn 0.75s ease-out forwards;
+                  }
+                `}</style>
+                <div key={pieAnimKey} className="pie-anim" style={{ width: "100%", height: "100%" }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={categoryData} cx="50%" cy="45%" innerRadius={60} outerRadius={80} dataKey="value" stroke="#ffffff" strokeWidth={2} strokeLinejoin="round" isAnimationActive={false} label={createCustomizedLabel(t, locale)} labelLine={{ stroke: '#cbd5e1', strokeWidth: 1 }}>
+                        {categoryData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                        <Label value={`¥${totalAmount.toLocaleString()}`} position="center" dy={-8} className="text-base font-black fill-slate-800" />
+                        <Label value={t("stats.total")} position="center" dy={8} className="text-[10px] font-bold fill-slate-400" />
+                      </Pie>
+                      <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={(value: any) => [`¥${Number(value).toLocaleString()}`, t("stats.amount")]} />
+                      <Legend verticalAlign="bottom" height={36} iconType="circle" formatter={(value: any) => <span className="text-xs font-bold text-slate-600 mr-2">{value}</span>} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
