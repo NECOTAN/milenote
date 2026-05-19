@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, X, Pencil, Trash2, CalendarClock, Pause, Play, ChevronDown, ChevronUp, Info, RepeatIcon } from "lucide-react"
+import { Plus, X, Pencil, Trash2, Pause, Play, ChevronDown, ChevronUp, Info, RepeatIcon } from "lucide-react"
 import { toast } from "sonner"
 import { useTranslation } from "@/lib/i18n"
 import { CATEGORIES, SUB_CATEGORIES } from "@/app/records/page"
@@ -192,15 +192,14 @@ const StatusBadge = ({ isActive }: { isActive: boolean }) => {
   const { t } = useTranslation()
   if (isActive) {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md bg-green-100 text-green-700">
         <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
         {t("records.status_active")}
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
-      <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md border border-slate-200 text-slate-500">
       {t("records.status_paused")}
     </span>
   )
@@ -445,7 +444,7 @@ export default function RecurringTab({ cars, onRecordsChanged }: { cars: any[], 
                     onClick={() => toggleActive(cost.id, cost.is_active)}
                     className={`flex items-center gap-1 text-[11px] font-bold px-2.5 py-1.5 rounded-lg transition-colors ${
                       cost.is_active
-                        ? 'text-amber-600 bg-amber-50 hover:bg-amber-100'
+                        ? 'text-slate-500 bg-slate-100 hover:bg-slate-200'
                         : 'text-green-600 bg-green-50 hover:bg-green-100'
                     }`}
                     title={cost.is_active ? t("records.pause_recurring") : t("records.resume_recurring")}
@@ -501,10 +500,9 @@ export default function RecurringTab({ cars, onRecordsChanged }: { cars: any[], 
                     </div>
 
                     {/* 次回支払日 */}
-                    <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded-lg mb-2">
-                      <CalendarClock size={13} />
+                    <p className="text-[11px] font-medium text-slate-400 mb-2">
                       {t("records.next_billing_date")}: {cost.next_billing_date.replace(/-/g, '/')}
-                    </div>
+                    </p>
 
                     {cost.memo && (
                       <p className="text-sm text-slate-600 bg-slate-50 p-2 rounded-md whitespace-pre-wrap inline-block mt-1 w-full">
