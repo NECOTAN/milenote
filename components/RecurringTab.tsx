@@ -211,6 +211,36 @@ const getFrequencyLabel = (freq: string, t: (key: string) => string): string => 
   return opt ? t(opt.labelKey) : freq
 }
 
+// ローディング中のスケルトンカード
+const RecurringCardSkeleton = () => (
+  <div className="space-y-3">
+    {[...Array(3)].map((_, i) => (
+      <div key={i} className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="p-4 flex gap-3 items-start">
+          <div className="w-12 h-12 rounded-full bg-slate-100 animate-pulse shrink-0 mt-1" />
+          <div className="flex-1 min-w-0 space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <div className="h-6 w-32 bg-slate-100 rounded-lg animate-pulse" />
+              <div className="flex gap-1 shrink-0">
+                <div className="h-7 w-7 bg-slate-100 rounded-lg animate-pulse" />
+                <div className="h-7 w-7 bg-slate-100 rounded-lg animate-pulse" />
+                <div className="h-7 w-7 bg-slate-100 rounded-lg animate-pulse" />
+              </div>
+            </div>
+            <div className="flex gap-1.5">
+              <div className="h-5 w-14 bg-slate-100 rounded-md animate-pulse" />
+              <div className="h-5 w-20 bg-slate-100 rounded-md animate-pulse" />
+              <div className="h-5 w-16 bg-slate-100 rounded-md animate-pulse" />
+            </div>
+            <div className="h-3 w-24 bg-slate-100 rounded animate-pulse" />
+            <div className="h-3 w-40 bg-slate-100 rounded animate-pulse" />
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+)
+
 // データが存在しない場合の空状態コンポーネント
 const EmptyState = ({ onAdd }: { onAdd: () => void }) => {
   const { t } = useTranslation()
@@ -259,7 +289,8 @@ export default function RecurringTab({ cars, onRecordsChanged }: { cars: any[], 
 
   const fetchData = async () => {
     setLoading(true)
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { session } } = await supabase.auth.getSession()
+    const user = session?.user
     if (user) {
       const { data } = await supabase
         .from("recurring_costs")
@@ -375,18 +406,32 @@ export default function RecurringTab({ cars, onRecordsChanged }: { cars: any[], 
 
   const handleDelete = async (id: string) => {
     if (!window.confirm(t("records.confirm_delete_recurring") || "削除しますか？")) return
+
+    // 楽観的UI: 先にローカル状態から削除
+    const prevCosts = costs
+    setCosts(prev => prev.filter(c => c.id !== id))
+
     const { error } = await supabase.from("recurring_costs").delete().eq("id", id)
-    if (error) toast.error(t("common.delete_failed"))
-    else {
+    if (error) {
+      // 失敗時はロールバック
+      setCosts(prevCosts)
+      toast.error(t("common.delete_failed"))
+    } else {
       toast.success(t("records.recurring_deleted"))
-      fetchData()
     }
   }
 
   const toggleActive = async (id: string, currentStatus: boolean) => {
+    // 楽観的UI: 先にローカル状態を反転
+    const prevCosts = costs
+    setCosts(prev => prev.map(c => c.id === id ? { ...c, is_active: !currentStatus } : c))
+
     const { error } = await supabase.from("recurring_costs").update({ is_active: !currentStatus }).eq("id", id)
-    if (error) toast.error(t("common.error_occurred"))
-    else fetchData()
+    if (error) {
+      // 失敗時はロールバック
+      setCosts(prevCosts)
+      toast.error(t("common.error_occurred"))
+    }
   }
 
   return (
@@ -418,6 +463,11 @@ export default function RecurringTab({ cars, onRecordsChanged }: { cars: any[], 
           nextBillingDate={nextBillingDate} setNextBillingDate={setNextBillingDate}
           memo={memo} setMemo={setMemo}
         />
+      )}
+
+      {/* ローディング中のスケルトン */}
+      {loading && !isAdding && !editId && costs.length === 0 && (
+        <RecurringCardSkeleton />
       )}
 
       {/* 空状態 */}
