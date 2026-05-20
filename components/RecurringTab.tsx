@@ -215,18 +215,16 @@ const getFrequencyLabel = (freq: string, t: (key: string) => string): string => 
 const RecurringCardSkeleton = () => (
   <div className="space-y-3">
     {[...Array(3)].map((_, i) => (
-      <div key={i} className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div key={i} className="bg-white rounded-xl shadow-sm overflow-hidden relative">
+        <div className="absolute top-3 right-3 flex items-center gap-1">
+          <div className="h-7 w-7 bg-slate-100 rounded-lg animate-pulse" />
+          <div className="h-7 w-7 bg-slate-100 rounded-lg animate-pulse" />
+          <div className="h-7 w-7 bg-slate-100 rounded-lg animate-pulse" />
+        </div>
         <div className="p-4 flex gap-3 items-start">
           <div className="w-12 h-12 rounded-full bg-slate-100 animate-pulse shrink-0 mt-1" />
-          <div className="flex-1 min-w-0 space-y-2">
-            <div className="flex items-start justify-between gap-2">
-              <div className="h-6 w-32 bg-slate-100 rounded-lg animate-pulse" />
-              <div className="flex gap-1 shrink-0">
-                <div className="h-7 w-7 bg-slate-100 rounded-lg animate-pulse" />
-                <div className="h-7 w-7 bg-slate-100 rounded-lg animate-pulse" />
-                <div className="h-7 w-7 bg-slate-100 rounded-lg animate-pulse" />
-              </div>
-            </div>
+          <div className="flex-1 min-w-0 pr-24 space-y-2">
+            <div className="h-6 w-32 bg-slate-100 rounded-lg animate-pulse" />
             <div className="flex gap-1.5">
               <div className="h-5 w-14 bg-slate-100 rounded-md animate-pulse" />
               <div className="h-5 w-20 bg-slate-100 rounded-md animate-pulse" />
@@ -484,48 +482,48 @@ export default function RecurringTab({ cars, onRecordsChanged }: { cars: any[], 
           return (
             <Card
               key={cost.id}
-              className={`border-none shadow-sm overflow-hidden transition-opacity ${cost.is_active ? 'bg-white' : 'bg-slate-50 opacity-60'}`}
+              className={`border-none shadow-sm overflow-hidden transition-opacity relative ${cost.is_active ? 'bg-white' : 'bg-slate-50 opacity-60'}`}
             >
               <CardContent className="p-0">
+                {/* アクションボタン（右上に常時表示） */}
+                <div className="absolute top-3 right-3 flex items-center gap-1 z-10">
+                  <button
+                    onClick={() => toggleActive(cost.id, cost.is_active)}
+                    className={`p-1.5 rounded-lg transition-colors ${
+                      cost.is_active
+                        ? 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'
+                        : 'text-slate-300 hover:text-green-500 hover:bg-green-50'
+                    }`}
+                    title={cost.is_active ? t("records.pause_recurring") : t("records.resume_recurring")}
+                  >
+                    {cost.is_active ? <Pause size={14} /> : <Play size={14} />}
+                  </button>
+                  <button
+                    onClick={() => handleStartEdit(cost)}
+                    className="p-1.5 rounded-lg text-slate-300 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(cost.id)}
+                    className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+
                 <div className="p-4 flex gap-3 items-start">
                   <div className={`p-3 rounded-full shrink-0 mt-1 ${cat.bg} ${cat.color}`}>
                     <Icon size={24} />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    {/* 金額 + アクションボタン */}
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <h3 className="font-bold text-slate-800 text-lg">
-                        ¥{cost.amount.toLocaleString()}
-                        <span className="text-xs text-slate-400 font-medium ml-1">
-                          / {getFrequencyLabel(cost.frequency, t)}
-                        </span>
-                      </h3>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          onClick={() => toggleActive(cost.id, cost.is_active)}
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            cost.is_active
-                              ? 'text-slate-300 hover:text-slate-500 hover:bg-slate-100'
-                              : 'text-slate-300 hover:text-green-500 hover:bg-green-50'
-                          }`}
-                          title={cost.is_active ? t("records.pause_recurring") : t("records.resume_recurring")}
-                        >
-                          {cost.is_active ? <Pause size={14} /> : <Play size={14} />}
-                        </button>
-                        <button
-                          onClick={() => handleStartEdit(cost)}
-                          className="p-1.5 rounded-lg text-slate-300 hover:text-blue-500 hover:bg-blue-50 transition-colors"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(cost.id)}
-                          className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
+                  <div className="flex-1 min-w-0 pr-24">
+                    {/* 金額 */}
+                    <h3 className="font-bold text-slate-800 text-lg mb-1">
+                      ¥{cost.amount.toLocaleString()}
+                      <span className="text-xs text-slate-400 font-medium ml-1">
+                        / {getFrequencyLabel(cost.frequency, t)}
+                      </span>
+                    </h3>
 
                     {/* ジャンルタグ + ステータスバッジ */}
                     <div className="flex items-center gap-1.5 mb-2">
