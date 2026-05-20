@@ -222,6 +222,7 @@
     "subtitle": "愛車管理を始めましょう",
     "email": "メールアドレス",
     "password": "パスワード",
+    "password_placeholder": "6文字以上で入力",
     "processing": "処理中...",
     "login": "ログインする",
     "signup": "新規アカウント作成",
