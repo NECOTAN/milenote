@@ -346,6 +346,15 @@ export default function StatsPage() {
     t("stats.expenditure"),
   ]
   const monthTooltipLabelFormatter = (label: any) => yearlyMonthFormatter(label)
+  const monthlyTooltipLabelFormatter = (label: any) => {
+    const [year, month] = String(label).split("-")
+    const monthNum = parseInt(month, 10)
+    if (locale === "en") {
+      const names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+      return `${names[monthNum - 1]} ${year}`
+    }
+    return `${year}年${monthNum}月`
+  }
   /* eslint-enable @typescript-eslint/no-explicit-any */
 
   // ローディング状態の表示
@@ -599,8 +608,7 @@ export default function StatsPage() {
                         <XAxis dataKey="month" fontSize={10} axisLine={false} tickLine={false} dy={10} tick={{ fill: '#94a3b8' }} tickFormatter={monthFormatter} padding={{ left: 30, right: 30 }} />
                         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} width={65} domain={[0, 'auto']} tickFormatter={(v: any) => v.toLocaleString()} />
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={(value: any) => [`¥${Number(value).toLocaleString()}`, t("stats.expenditure")]} />
+                        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={expenditureTooltipFormatter} labelFormatter={monthlyTooltipLabelFormatter} />
                         <Line type="linear" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} />
                       </LineChart>
                     ) : (
@@ -609,8 +617,7 @@ export default function StatsPage() {
                         <XAxis dataKey="month" fontSize={10} axisLine={false} tickLine={false} dy={10} tick={{ fill: '#94a3b8' }} tickFormatter={monthFormatter} />
                         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} width={65} tickFormatter={(v: any) => v.toLocaleString()} />
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={(value: any) => [`¥${Number(value).toLocaleString()}`, t("stats.expenditure")]} />
+                        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={expenditureTooltipFormatter} labelFormatter={monthlyTooltipLabelFormatter} />
                         <Bar dataKey="amount" radius={[4, 4, 0, 0]} fill="#3b82f6" />
                       </BarChart>
                     )}
