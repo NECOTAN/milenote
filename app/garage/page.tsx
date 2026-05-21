@@ -407,8 +407,8 @@ export default function GaragePage() {
                     <div className="space-y-2"><Label>{t("common.grade")}</Label><Input placeholder="GT Limited" value={grade} onChange={(e) => setGrade(e.target.value)} className="placeholder:text-slate-300" /></div>
                     <div className="space-y-2"><Label>{t("garage.body_color")}</Label><Input placeholder="" value={color} onChange={(e) => setColor(e.target.value)} className="placeholder:text-slate-300" /></div>
                     <div className="space-y-2"><Label>{t("garage.current_odo")} <span className="text-red-500">{t("common.required")}</span></Label><Input type="number" placeholder="52400" value={currentOdo} onChange={(e) => setCurrentOdo(e.target.value)} required className="placeholder:text-slate-300" /></div>
-                    <div className="space-y-2"><Label>{t("garage.first_registration")}</Label><Input type="month" value={firstRegistrationDate} onChange={(e) => setFirstRegistrationDate(e.target.value)} className="placeholder:text-slate-300" /></div>
-                    <div className="space-y-2"><Label>{t("common.delivery_date")}</Label><Input type="date" value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} className="placeholder:text-slate-300" /></div>
+                    <div className="space-y-2"><Label>{t("garage.first_registration")}</Label><Input type="month" value={firstRegistrationDate} onChange={(e) => setFirstRegistrationDate(e.target.value)} className="placeholder:text-slate-300 appearance-none h-8 min-h-0" /></div>
+                    <div className="space-y-2"><Label>{t("common.delivery_date")}</Label><Input type="date" value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} className="placeholder:text-slate-300 appearance-none h-8 min-h-0" /></div>
                     <div className="space-y-2"><Label>{t("garage.purchase_odo")}</Label><Input type="number" placeholder="48000" value={purchaseOdo} onChange={(e) => setPurchaseOdo(e.target.value)} className="placeholder:text-slate-300" /></div>
                   </div>
                   <div className="space-y-2">
