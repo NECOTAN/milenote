@@ -39,42 +39,48 @@ type Record_ = {
   fuel_amount: string | number | null
 }
 
-const createCustomizedLabel = (t: (key: string, params?: Record<string, string | number>) => string, locale: string) => (props: any) => {
-  const { x, y, percent, value, textAnchor } = props;
+const createCustomizedLabel = (t: (key: string, params?: Record<string, string | number>) => string, locale: string) => {
+  // Recharts の PieLabel 型は省略可能フィールドを含む複雑な union のため any を許容
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const PieCustomLabel = (props: any) => {
+    const { x, y, percent, value, textAnchor } = props;
 
-  const formatValue = (val: number) => {
-    const truncateToOneDecimal = (num: number, divisor: number) => {
-      return (Math.floor(num / (divisor / 10)) / 10).toString();
-    };
+    const formatValue = (val: number) => {
+      const truncateToOneDecimal = (num: number, divisor: number) => {
+        return (Math.floor(num / (divisor / 10)) / 10).toString();
+      };
 
-    if (locale === "en") {
-      if (val >= 1000) {
-        return `¥${truncateToOneDecimal(val, 1000)}${t("stats.unit_k")}`;
+      if (locale === "en") {
+        if (val >= 1000) {
+          return `¥${truncateToOneDecimal(val, 1000)}${t("stats.unit_k")}`;
+        }
+        return `¥${val.toLocaleString()}`;
+      }
+      if (val >= 10000) {
+        return `¥${truncateToOneDecimal(val, 10000)}${t("stats.unit_ten_thousand")}`;
       }
       return `¥${val.toLocaleString()}`;
-    }
-    if (val >= 10000) {
-      return `¥${truncateToOneDecimal(val, 10000)}${t("stats.unit_ten_thousand")}`;
-    }
-    return `¥${val.toLocaleString()}`;
+    };
+
+    if (percent < 0.01) return null;
+
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="#64748b"
+        textAnchor={textAnchor as "start" | "middle" | "end"}
+        dominantBaseline="central"
+        fontSize={10}
+        fontWeight="500"
+        style={{ animation: "pieLabelFadeIn 0.75s ease-out forwards" }}
+      >
+        {`${formatValue(value)} (${(percent * 100).toFixed(1)}%)`}
+      </text>
+    );
   };
-
-  if (percent < 0.01) return null;
-
-  return (
-    <text
-      x={x}
-      y={y}
-      fill="#64748b"
-      textAnchor={textAnchor as "start" | "middle" | "end"}
-      dominantBaseline="central"
-      fontSize={10}
-      fontWeight="500"
-      style={{ animation: "pieLabelFadeIn 0.75s ease-out forwards" }}
-    >
-      {`${formatValue(value)} (${(percent * 100).toFixed(1)}%)`}
-    </text>
-  );
+  PieCustomLabel.displayName = "PieCustomLabel";
+  return PieCustomLabel;
 };
 
 // 期間フィルターUIコンポーネント
@@ -331,6 +337,17 @@ export default function StatsPage() {
     return `${m}月`
   }
 
+  // Recharts のコールバック型（PieLabelRenderProps / Formatter / LabelFormatter 等）は
+  // 省略可能フィールドを含む複雑な union のため、本ファイル内では any を許容する
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const yenTickFormatter = (v: any) => (v === 0 ? "0" : `¥${Number(v).toLocaleString()}`)
+  const expenditureTooltipFormatter = (value: any): [string, string] => [
+    `¥${Number(value).toLocaleString()}`,
+    t("stats.expenditure"),
+  ]
+  const monthTooltipLabelFormatter = (label: any) => yearlyMonthFormatter(label)
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+
   // ローディング状態の表示
   if (loading) return (
     <main className="p-4 space-y-6 max-w-5xl mx-auto">
@@ -532,7 +549,10 @@ export default function StatsPage() {
                             <Label value={`¥${totalAmount.toLocaleString()}`} position="center" dy={-8} className="text-base font-black fill-slate-800" />
                             <Label value={t("stats.total")} position="center" dy={8} className="text-[10px] font-bold fill-slate-400" />
                           </Pie>
+                          {/* Recharts のコールバック型が複雑なため any を許容 */}
+                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                           <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={(value: any) => [`¥${Number(value).toLocaleString()}`, t("stats.amount")]} />
+                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                           <Legend verticalAlign="bottom" height={36} iconType="circle" formatter={(value: any) => <span className="text-xs font-bold text-slate-600 mr-2">{value}</span>} />
                         </PieChart>
                       </ResponsiveContainer>
@@ -577,7 +597,9 @@ export default function StatsPage() {
                       <LineChart data={monthlyData} margin={{ top: 40, right: 30, left: 10, bottom: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                         <XAxis dataKey="month" fontSize={10} axisLine={false} tickLine={false} dy={10} tick={{ fill: '#94a3b8' }} tickFormatter={monthFormatter} padding={{ left: 30, right: 30 }} />
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} width={65} domain={[0, 'auto']} tickFormatter={(v: any) => v.toLocaleString()} />
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={(value: any) => [`¥${Number(value).toLocaleString()}`, t("stats.expenditure")]} />
                         <Line type="linear" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} />
                       </LineChart>
@@ -585,7 +607,9 @@ export default function StatsPage() {
                       <BarChart data={monthlyData} margin={{ top: 40, right: 30, left: 10, bottom: 20 }} barCategoryGap="30%">
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                         <XAxis dataKey="month" fontSize={10} axisLine={false} tickLine={false} dy={10} tick={{ fill: '#94a3b8' }} tickFormatter={monthFormatter} />
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} width={65} tickFormatter={(v: any) => v.toLocaleString()} />
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={(value: any) => [`¥${Number(value).toLocaleString()}`, t("stats.expenditure")]} />
                         <Bar dataKey="amount" radius={[4, 4, 0, 0]} fill="#3b82f6" />
                       </BarChart>
@@ -661,13 +685,13 @@ export default function StatsPage() {
                       tickLine={false}
                       tick={{ fill: '#94a3b8' }}
                       width={70}
-                      tickFormatter={(v: any) => v === 0 ? '0' : `¥${Number(v).toLocaleString()}`}
+                      tickFormatter={yenTickFormatter}
                     />
                     <Tooltip
                       cursor={false}
                       contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                      formatter={(value: any) => [`¥${Number(value).toLocaleString()}`, t("stats.expenditure")]}
-                      labelFormatter={(label: any) => yearlyMonthFormatter(label)}
+                      formatter={expenditureTooltipFormatter}
+                      labelFormatter={monthTooltipLabelFormatter}
                     />
                     <Line type="linear" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} />
                   </LineChart>
@@ -689,13 +713,13 @@ export default function StatsPage() {
                       tickLine={false}
                       tick={{ fill: '#94a3b8' }}
                       width={70}
-                      tickFormatter={(v: any) => v === 0 ? '0' : `¥${Number(v).toLocaleString()}`}
+                      tickFormatter={yenTickFormatter}
                     />
                     <Tooltip
                       cursor={false}
                       contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                      formatter={(value: any) => [`¥${Number(value).toLocaleString()}`, t("stats.expenditure")]}
-                      labelFormatter={(label: any) => yearlyMonthFormatter(label)}
+                      formatter={expenditureTooltipFormatter}
+                      labelFormatter={monthTooltipLabelFormatter}
                     />
                     <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
                       {yearlyData.map((entry, index) => (
