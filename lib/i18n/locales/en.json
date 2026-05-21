@@ -194,7 +194,22 @@
     "yearly_stats": "Yearly Stats",
     "yearly_total": "Annual Total",
     "unit_k": "k",
-    "unit_ten_thousand": "万"
+    "unit_ten_thousand": "万",
+    "tab_distance": "Distance",
+    "tab_cost": "Cost Analysis",
+    "fuel_summary": "Fuel Summary",
+    "total_odo": "Total Distance",
+    "total_fuel": "Total Fuel",
+    "fuel_count": "Refuels",
+    "total_fuel_cost": "Total Fuel Cost",
+    "avg_unit_price": "Avg. Unit Price",
+    "co2_emission": "CO₂ Emissions",
+    "co2_note": "Based on ~2.32 kg CO₂ per liter of gasoline",
+    "unit_liter": "L",
+    "unit_count_times": "times",
+    "unit_yen_per_liter": "¥/L",
+    "unit_kg": "kg",
+    "unit_km": "km"
   },
   "mypage": {
     "title": "My Page",
