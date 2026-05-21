@@ -166,7 +166,7 @@
     "is_active": "Status",
     "active": "Active",
     "inactive": "Inactive",
-    "status_active": "Auto-recording",
+    "status_active": "Recording",
     "status_paused": "Paused",
     "pause_recurring": "Pause",
     "resume_recurring": "Resume",

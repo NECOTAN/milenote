@@ -166,7 +166,7 @@
     "is_active": "有効状態",
     "active": "有効",
     "inactive": "停止中",
-    "status_active": "自動記録中",
+    "status_active": "記録中",
     "status_paused": "停止中",
     "pause_recurring": "一時停止",
     "resume_recurring": "再開する",
