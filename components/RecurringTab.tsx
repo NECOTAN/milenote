@@ -199,7 +199,8 @@ const StatusBadge = ({ isActive }: { isActive: boolean }) => {
     )
   }
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md border border-slate-200 text-slate-500 whitespace-nowrap shrink-0">
+    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-md bg-red-100 text-red-700 whitespace-nowrap shrink-0">
+      <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
       {t("records.status_paused")}
     </span>
   )
