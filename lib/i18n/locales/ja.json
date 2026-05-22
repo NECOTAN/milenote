@@ -204,7 +204,7 @@
     "total_fuel_cost": "累計給油代",
     "avg_unit_price": "平均単価",
     "co2_emission": "CO₂排出量",
-    "co2_note": "※ガソリン1L = 約2.32kg CO₂で計算",
+    "co2_note": "ガソリン2.32 / 軽油2.62 / EV 0 kg-CO₂/L",
     "unit_liter": "L",
     "unit_count_times": "回",
     "unit_yen_per_liter": "円/L",

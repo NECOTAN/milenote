@@ -37,7 +37,19 @@ type Record_ = {
   amount: number
   date: string
   fuel_amount: string | number | null
+  car_id: string | null
 }
+
+// 燃料種別ごとのCO₂排出係数 (kg-CO₂/L)
+// EVは走行時排出ゼロ、その他/未設定はガソリン相当として扱う
+const CO2_COEFFICIENT: Record<string, number> = {
+  "レギュラー": 2.32,
+  "ハイオク": 2.32,
+  "軽油": 2.62,
+  "EV": 0,
+  "その他": 2.32,
+}
+const CO2_COEFFICIENT_DEFAULT = 2.32
 
 const createCustomizedLabel = (t: (key: string, params?: Record<string, string | number>) => string, locale: string) => {
   // Recharts の PieLabel 型は省略可能フィールドを含む複雑な union のため any を許容
@@ -160,6 +172,7 @@ function StatRow({
 
 export default function StatsPage() {
   const [records, setRecords] = useState<Record_[]>([])
+  const [carFuelTypes, setCarFuelTypes] = useState<Map<string, string>>(new Map())
   const [totalOdo, setTotalOdo] = useState(0)
   const [loading, setLoading] = useState(true)
 
@@ -193,10 +206,15 @@ export default function StatsPage() {
       if (user) {
         const { data: recordsData } = await supabase.from("records").select("*").eq("user_id", user.id)
         if (recordsData) setRecords(recordsData)
-        const { data: carsData } = await supabase.from("cars").select("current_odo").eq("user_id", user.id)
+        const { data: carsData } = await supabase.from("cars").select("id, current_odo, fuel_type").eq("user_id", user.id)
         if (carsData) {
           const maxOdo = Math.max(...carsData.map(c => c.current_odo), 0)
           setTotalOdo(maxOdo)
+          const fuelTypeMap = new Map<string, string>()
+          carsData.forEach((c: { id: string; fuel_type: string | null }) => {
+            if (c.fuel_type) fuelTypeMap.set(c.id, c.fuel_type)
+          })
+          setCarFuelTypes(fuelTypeMap)
         }
       }
 
@@ -317,7 +335,15 @@ export default function StatsPage() {
   const fuelCount = fuelRecords.length
   const totalFuelCost = fuelRecords.reduce((sum, r) => sum + r.amount, 0)
   const avgUnitPrice = totalFuelAmount > 0 ? totalFuelCost / totalFuelAmount : 0
-  const co2Emission = totalFuelAmount * 2.32
+  const co2Emission = fuelRecords.reduce((sum, r) => {
+    const liters = r.fuel_amount ? parseFloat(String(r.fuel_amount)) : 0
+    if (isNaN(liters)) return sum
+    const fuelType = r.car_id ? carFuelTypes.get(r.car_id) : null
+    const coefficient = fuelType && fuelType in CO2_COEFFICIENT
+      ? CO2_COEFFICIENT[fuelType]
+      : CO2_COEFFICIENT_DEFAULT
+    return sum + liters * coefficient
+  }, 0)
 
   // ロケール対応の月フォーマッター
   const monthFormatter = (v: string) => {
