@@ -431,7 +431,6 @@ export default function StatsPage() {
                     <Globe className="text-blue-500 w-10 h-10" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t("stats.distance_scale")}</p>
                     <h3 className="text-2xl font-black text-slate-800 tracking-wide tabular-nums">
                       {t("stats.earth_rounds", { rounds: earthRounds })}
                     </h3>
