@@ -396,13 +396,13 @@ export default function StatsPage() {
         <TabsContent value="distance" className="space-y-6 outline-none">
 
           {/* ヒーローバナー：地球周、月進捗 */}
-          <Card className="border-none shadow-sm overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+          <Card className="border-none shadow-sm overflow-hidden bg-white">
             <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-11 md:gap-8">
                 {/* 地球周セクション */}
                 <div className="flex items-center gap-4">
-                  <div className="bg-white/70 backdrop-blur-sm p-4 rounded-full shadow-sm shrink-0">
-                    <Globe className="text-blue-500 w-10 h-10 animate-pulse" />
+                  <div className="bg-blue-50 p-4 rounded-full shadow-sm shrink-0">
+                    <Globe className="text-blue-500 w-10 h-10" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t("stats.distance_scale")}</p>
@@ -416,7 +416,7 @@ export default function StatsPage() {
                 </div>
 
                 {/* 月進捗セクション */}
-                <div className="space-y-3 md:border-l md:border-white/80 md:pl-8">
+                <div className="space-y-3 md:border-l md:border-slate-100 md:pl-8">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Moon className="text-yellow-500 w-5 h-5" />
@@ -424,7 +424,7 @@ export default function StatsPage() {
                     </div>
                     <span className="text-sm font-black text-slate-800 tabular-nums">{moonPercent}%</span>
                   </div>
-                  <div className="w-full bg-white/70 h-2.5 rounded-full overflow-hidden">
+                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
                     <div
                       className="bg-gradient-to-r from-blue-500 to-purple-500 h-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)]"
                       style={{ width: `${moonPercent}%` }}
