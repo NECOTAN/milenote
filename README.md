@@ -11,6 +11,13 @@
 ## 📥 ローカル起動方法
 本アプリケーションはローカル環境（Next.js + Supabase）で動作します。以下の手順でセットアップしてください。
 
+### 前提条件
+- Node.js 18以上
+- [Supabase](https://supabase.com/) アカウント
+- [Docker Desktop](https://docs.docker.com/desktop)（Supabase CLI でDB初期化に必要）
+
+### 手順
+
 1. リポジトリのクローン
    ```bash
    git clone https://github.com/NECOTAN/milenote.git
@@ -20,17 +27,40 @@
    ```bash
    npm install
    ```
-3. 環境変数の設定
-   プロジェクトのルートに `.env.local` を作成し、Supabaseの接続情報を入力します。
+3. Supabaseプロジェクトの作成
+   [Supabase Dashboard](https://supabase.com/dashboard) で新規プロジェクトを作成し、以下を控えておきます。
+   - **Project URL**（Settings → API → Project URL）
+   - **anon public key**（Settings → API → Project API keys → anon）
+   - **Project ID**（Settings → General → Reference ID）
+   - **Database password**（プロジェクト作成時に設定したもの）
+
+4. 環境変数の設定
+   プロジェクトのルートに `.env.local` を作成し、3.で控えた値を設定します。
    ```env
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
    ```
-4. 開発サーバーの起動
+
+5. データベーススキーマの初期化
+   Supabase CLIでマイグレーションを適用します。
+   ```bash
+   # Docker Desktop を起動しておく
+   npx supabase login
+   npx supabase link --project-ref <your_project_id>
+   npx supabase db push
+   ```
+   これで `supabase/migrations/` 以下のSQLが順番に適用され、テーブル・関数・トリガー・RLSポリシー・Storageバケット・ポリシーが全て作成されます。
+
+6. 開発サーバーの起動
    ```bash
    npm run dev
    ```
-5. ブラウザで `http://localhost:3000` にアクセスします。
+7. ブラウザで `http://localhost:3000` にアクセスします。
+
+### データベース構成について
+`supabase/migrations/` 配下のSQLファイルでスキーマを管理しています。スキーマを変更したい場合は新しいマイグレーションファイルを追加してください。
+
+migrationの追加・適用・ドリフト対処などの詳しい運用手順は [manuals/supabase_migrations.md](manuals/supabase_migrations.md) を参照してください。
 
 ## 🎨 技術スタック・クレジット (Tech Stack & Credits)
 このプロジェクトは以下の優れた技術およびオープンソースライブラリを使用して構築されています。

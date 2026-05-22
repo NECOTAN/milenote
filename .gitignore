@@ -40,6 +40,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# supabase CLI working files
+supabase/.temp
+supabase/.branches
+
 # AI conversation history
 /docs
 /.ai
