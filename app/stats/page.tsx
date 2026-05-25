@@ -358,6 +358,10 @@ export default function StatsPage() {
 
   const yearlyTotal = yearFilteredRecords.reduce((sum, r) => sum + r.amount, 0)
 
+  // グラフ再アニメーション用のキー（フィルター・年・グラフ種別・データ量が変わるたびに再マウントしてCSSアニメを発火させる）
+  const monthlyAnimKey = `${monthStart}|${monthEnd}|${monthlyChartType}|${monthlyData.length}`
+  const yearlyAnimKey = `${selectedYear}|${yearlyChartType}|${yearlyCategoriesPresent.length}`
+
   // 走行距離スケール計算処理
   const earthCircumference = 40075
   const distanceToMoon = 384400
@@ -584,6 +588,43 @@ export default function StatsPage() {
 
         {/* 費用分析タブ */}
         <TabsContent value="cost" className="space-y-6 outline-none">
+          <style>{`
+            @keyframes barStackRise {
+              from { transform: scaleY(0); opacity: 0; }
+              to   { transform: scaleY(1); opacity: 1; }
+            }
+            .bar-anim .recharts-bar {
+              transform-box: fill-box;
+              transform-origin: bottom;
+              animation: barStackRise 0.6s cubic-bezier(0.33, 1, 0.68, 1) backwards;
+            }
+            .bar-anim .recharts-bar:nth-of-type(1) { animation-delay: 0ms; }
+            .bar-anim .recharts-bar:nth-of-type(2) { animation-delay: 90ms; }
+            .bar-anim .recharts-bar:nth-of-type(3) { animation-delay: 180ms; }
+            .bar-anim .recharts-bar:nth-of-type(4) { animation-delay: 270ms; }
+            .bar-anim .recharts-bar:nth-of-type(5) { animation-delay: 360ms; }
+            .bar-anim .recharts-bar:nth-of-type(6) { animation-delay: 450ms; }
+            .bar-anim .recharts-bar:nth-of-type(7) { animation-delay: 540ms; }
+            .bar-anim .recharts-legend-wrapper {
+              animation: chartFadeIn 0.5s ease-out 0.4s backwards;
+            }
+            @keyframes chartFadeIn {
+              from { opacity: 0; transform: translateY(4px); }
+              to   { opacity: 1; transform: translateY(0); }
+            }
+            @keyframes lineDraw {
+              from { stroke-dashoffset: 2500; }
+              to   { stroke-dashoffset: 0; }
+            }
+            .line-anim .recharts-line-curve {
+              stroke-dasharray: 2500;
+              animation: lineDraw 0.9s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            }
+            .line-anim .recharts-line-dots {
+              opacity: 0;
+              animation: chartFadeIn 0.4s ease-out 0.75s forwards;
+            }
+          `}</style>
 
           {/* グラフセクション */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -684,36 +725,39 @@ export default function StatsPage() {
                     <p className="text-sm font-medium">{t("stats.no_data")}</p>
                   </div>
                 ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    {monthlyChartType === "line" ? (
-                      <LineChart data={monthlyData} margin={{ top: 40, right: 30, left: 10, bottom: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="month" fontSize={10} axisLine={false} tickLine={false} dy={10} tick={{ fill: '#94a3b8' }} tickFormatter={monthFormatter} padding={{ left: 30, right: 30 }} />
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} width={65} domain={[0, 'auto']} tickFormatter={(v: any) => v.toLocaleString()} />
-                        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={expenditureTooltipFormatter} labelFormatter={monthlyTooltipLabelFormatter} />
-                        <Line type="linear" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} />
-                      </LineChart>
-                    ) : (
-                      <BarChart data={monthlyData} margin={{ top: 20, right: 30, left: 10, bottom: 4 }} barCategoryGap="30%">
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="month" fontSize={10} axisLine={false} tickLine={false} dy={10} tick={{ fill: '#94a3b8' }} tickFormatter={monthFormatter} />
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} width={65} tickFormatter={(v: any) => v.toLocaleString()} />
-                        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={categoryBarTooltipFormatter} labelFormatter={monthlyTooltipLabelFormatter} />
-                        <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: 11, paddingTop: 4 }} formatter={categoryLegendFormatter} />
-                        {monthlyCategoriesPresent.map((cat) => (
-                          <Bar
-                            key={cat}
-                            dataKey={cat}
-                            stackId="a"
-                            fill={activeCategoryMap[cat].color}
-                            shape={makeStackedBarShape(cat, monthlyTopByRow, (p) => p.month)}
-                          />
-                        ))}
-                      </BarChart>
-                    )}
-                  </ResponsiveContainer>
+                  <div key={monthlyAnimKey} className={monthlyChartType === "bar" ? "bar-anim" : "line-anim"} style={{ width: "100%", height: "100%" }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      {monthlyChartType === "line" ? (
+                        <LineChart data={monthlyData} margin={{ top: 40, right: 30, left: 10, bottom: 20 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                          <XAxis dataKey="month" fontSize={10} axisLine={false} tickLine={false} dy={10} tick={{ fill: '#94a3b8' }} tickFormatter={monthFormatter} padding={{ left: 30, right: 30 }} />
+                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                          <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} width={65} domain={[0, 'auto']} tickFormatter={(v: any) => v.toLocaleString()} />
+                          <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={expenditureTooltipFormatter} labelFormatter={monthlyTooltipLabelFormatter} />
+                          <Line type="linear" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} isAnimationActive={false} />
+                        </LineChart>
+                      ) : (
+                        <BarChart data={monthlyData} margin={{ top: 20, right: 30, left: 10, bottom: 4 }} barCategoryGap="30%">
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                          <XAxis dataKey="month" fontSize={10} axisLine={false} tickLine={false} dy={10} tick={{ fill: '#94a3b8' }} tickFormatter={monthFormatter} />
+                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                          <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} width={65} tickFormatter={(v: any) => v.toLocaleString()} />
+                          <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={categoryBarTooltipFormatter} labelFormatter={monthlyTooltipLabelFormatter} />
+                          <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: 11, paddingTop: 4 }} formatter={categoryLegendFormatter} />
+                          {monthlyCategoriesPresent.map((cat) => (
+                            <Bar
+                              key={cat}
+                              dataKey={cat}
+                              stackId="a"
+                              fill={activeCategoryMap[cat].color}
+                              shape={makeStackedBarShape(cat, monthlyTopByRow, (p) => p.month)}
+                              isAnimationActive={false}
+                            />
+                          ))}
+                        </BarChart>
+                      )}
+                    </ResponsiveContainer>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -765,75 +809,78 @@ export default function StatsPage() {
               </div>
             </CardHeader>
             <CardContent className="h-64 px-2 pb-4 pt-0">
-              <ResponsiveContainer width="100%" height="100%">
-                {yearlyChartType === "line" ? (
-                  <LineChart data={yearlyData} margin={{ top: 20, right: 16, left: 8, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis
-                      dataKey="month"
-                      fontSize={10}
-                      axisLine={false}
-                      tickLine={false}
-                      dy={8}
-                      tick={{ fill: '#94a3b8' }}
-                      tickFormatter={yearlyMonthFormatter}
-                    />
-                    <YAxis
-                      fontSize={10}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: '#94a3b8' }}
-                      width={70}
-                      tickFormatter={yenTickFormatter}
-                    />
-                    <Tooltip
-                      cursor={false}
-                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                      itemStyle={{ color: '#3b82f6' }}
-                      formatter={expenditureTooltipFormatter}
-                      labelFormatter={monthTooltipLabelFormatter}
-                    />
-                    <Line type="linear" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} />
-                  </LineChart>
-                ) : (
-                  <BarChart data={yearlyData} margin={{ top: 20, right: 16, left: 8, bottom: 4 }} barCategoryGap="30%">
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis
-                      dataKey="month"
-                      fontSize={10}
-                      axisLine={false}
-                      tickLine={false}
-                      dy={8}
-                      tick={{ fill: '#94a3b8' }}
-                      tickFormatter={yearlyMonthFormatter}
-                    />
-                    <YAxis
-                      fontSize={10}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: '#94a3b8' }}
-                      width={70}
-                      tickFormatter={yenTickFormatter}
-                    />
-                    <Tooltip
-                      cursor={false}
-                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                      formatter={categoryBarTooltipFormatter}
-                      labelFormatter={monthTooltipLabelFormatter}
-                    />
-                    <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: 11, paddingTop: 4 }} formatter={categoryLegendFormatter} />
-                    {yearlyCategoriesPresent.map((cat) => (
-                      <Bar
-                        key={cat}
-                        dataKey={cat}
-                        stackId="a"
-                        fill={activeCategoryMap[cat].color}
-                        shape={makeStackedBarShape(cat, yearlyTopByRow, (p) => String(p.month))}
+              <div key={yearlyAnimKey} className={yearlyChartType === "bar" ? "bar-anim" : "line-anim"} style={{ width: "100%", height: "100%" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  {yearlyChartType === "line" ? (
+                    <LineChart data={yearlyData} margin={{ top: 20, right: 16, left: 8, bottom: 4 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis
+                        dataKey="month"
+                        fontSize={10}
+                        axisLine={false}
+                        tickLine={false}
+                        dy={8}
+                        tick={{ fill: '#94a3b8' }}
+                        tickFormatter={yearlyMonthFormatter}
                       />
-                    ))}
-                  </BarChart>
-                )}
-              </ResponsiveContainer>
+                      <YAxis
+                        fontSize={10}
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: '#94a3b8' }}
+                        width={70}
+                        tickFormatter={yenTickFormatter}
+                      />
+                      <Tooltip
+                        cursor={false}
+                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                        itemStyle={{ color: '#3b82f6' }}
+                        formatter={expenditureTooltipFormatter}
+                        labelFormatter={monthTooltipLabelFormatter}
+                      />
+                      <Line type="linear" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} isAnimationActive={false} />
+                    </LineChart>
+                  ) : (
+                    <BarChart data={yearlyData} margin={{ top: 20, right: 16, left: 8, bottom: 4 }} barCategoryGap="30%">
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis
+                        dataKey="month"
+                        fontSize={10}
+                        axisLine={false}
+                        tickLine={false}
+                        dy={8}
+                        tick={{ fill: '#94a3b8' }}
+                        tickFormatter={yearlyMonthFormatter}
+                      />
+                      <YAxis
+                        fontSize={10}
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: '#94a3b8' }}
+                        width={70}
+                        tickFormatter={yenTickFormatter}
+                      />
+                      <Tooltip
+                        cursor={false}
+                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                        formatter={categoryBarTooltipFormatter}
+                        labelFormatter={monthTooltipLabelFormatter}
+                      />
+                      <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: 11, paddingTop: 4 }} formatter={categoryLegendFormatter} />
+                      {yearlyCategoriesPresent.map((cat) => (
+                        <Bar
+                          key={cat}
+                          dataKey={cat}
+                          stackId="a"
+                          fill={activeCategoryMap[cat].color}
+                          shape={makeStackedBarShape(cat, yearlyTopByRow, (p) => String(p.month))}
+                          isAnimationActive={false}
+                        />
+                      ))}
+                    </BarChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
             </CardContent>
           </Card>
 
