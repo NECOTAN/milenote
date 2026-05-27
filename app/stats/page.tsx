@@ -206,6 +206,13 @@ export default function StatsPage() {
   const currentYear = new Date().getFullYear()
   const [selectedYear, setSelectedYear] = useState(currentYear)
 
+  // 折れ線グラフの線の描画と点の出現を同期
+  const monthlyLineContainerRef = useRef<HTMLDivElement>(null)
+  const yearlyLineContainerRef = useRef<HTMLDivElement>(null)
+  const [monthlyLineReady, setMonthlyLineReady] = useState(false)
+  const [yearlyLineReady, setYearlyLineReady] = useState(false)
+  const LINE_ANIM_DURATION_MS = 900
+
   const supabase = createClient()
   const { t, locale } = useTranslation()
 
@@ -298,6 +305,53 @@ export default function StatsPage() {
     if (isFirstCatFilter.current) { isFirstCatFilter.current = false; return }
     setPieAnimKey(k => k + 1)
   }, [catStart, catEnd])
+
+  // 折れ線グラフの実パス長を測定して CSS 変数に反映し、線と点のアニメーションを同期させる
+  useEffect(() => {
+    setMonthlyLineReady(false)
+    if (monthlyChartType !== "line") return
+    const container = monthlyLineContainerRef.current
+    if (!container) return
+    let raf = 0
+    let attempts = 0
+    const measure = () => {
+      const path = container.querySelector(".recharts-line-curve") as SVGPathElement | null
+      if (path) {
+        const len = path.getTotalLength()
+        if (len > 0) {
+          container.style.setProperty("--line-length", `${len}`)
+          setMonthlyLineReady(true)
+          return
+        }
+      }
+      if (attempts++ < 30) raf = requestAnimationFrame(measure)
+    }
+    raf = requestAnimationFrame(measure)
+    return () => { if (raf) cancelAnimationFrame(raf) }
+  }, [monthStart, monthEnd, monthlyChartType, records.length])
+
+  useEffect(() => {
+    setYearlyLineReady(false)
+    if (yearlyChartType !== "line") return
+    const container = yearlyLineContainerRef.current
+    if (!container) return
+    let raf = 0
+    let attempts = 0
+    const measure = () => {
+      const path = container.querySelector(".recharts-line-curve") as SVGPathElement | null
+      if (path) {
+        const len = path.getTotalLength()
+        if (len > 0) {
+          container.style.setProperty("--line-length", `${len}`)
+          setYearlyLineReady(true)
+          return
+        }
+      }
+      if (attempts++ < 30) raf = requestAnimationFrame(measure)
+    }
+    raf = requestAnimationFrame(measure)
+    return () => { if (raf) cancelAnimationFrame(raf) }
+  }, [selectedYear, yearlyChartType, records.length])
 
   type MonthlyBucket = { month: string; amount: number } & Record<CategoryKey, number>
   const monthlyData = monthFilteredRecords.reduce<MonthlyBucket[]>((acc, curr) => {
@@ -431,6 +485,38 @@ export default function StatsPage() {
   const categoryLegendFormatter = (value: any) => (
     <span className="text-xs font-bold text-slate-600 mr-2">{t(`categories.${value}`)}</span>
   )
+  // 折れ線グラフのドット描画（線の進行に合わせて各点をフェードイン）
+  const yearlyLastValidIndex = yearlyData.reduce(
+    (acc, d, i) => (d.amount != null ? i : acc), -1,
+  )
+  const makeLineDot = (totalLastIndex: number) => {
+    const LineDot = (props: any) => {
+      const { cx, cy, index, value } = props
+      if (cx == null || cy == null || value == null) {
+        return <g key={`line-dot-${index}`} />
+      }
+      const denom = Math.max(totalLastIndex, 1)
+      const delay = (Math.min(index, totalLastIndex) / denom) * LINE_ANIM_DURATION_MS
+      return (
+        <circle
+          key={`line-dot-${index}`}
+          cx={cx}
+          cy={cy}
+          r={4}
+          fill="#3b82f6"
+          stroke="#fff"
+          strokeWidth={2}
+          className="line-dot-anim"
+          style={{ animationDelay: `${delay}ms` }}
+        />
+      )
+    }
+    LineDot.displayName = "LineDot"
+    return LineDot
+  }
+  const monthlyLineDot = makeLineDot(monthlyData.length - 1)
+  const yearlyLineDot = makeLineDot(yearlyLastValidIndex)
+
   const makeStackedBarShape = (
     cat: CategoryKey,
     topByRow: Map<string, CategoryKey>,
@@ -613,16 +699,24 @@ export default function StatsPage() {
               to   { opacity: 1; transform: translateY(0); }
             }
             @keyframes lineDraw {
-              from { stroke-dashoffset: 2500; }
-              to   { stroke-dashoffset: 0; }
+              to { stroke-dashoffset: 0; }
+            }
+            @keyframes dotFadeIn {
+              from { opacity: 0; }
+              to   { opacity: 1; }
             }
             .line-anim .recharts-line-curve {
-              stroke-dasharray: 2500;
-              animation: lineDraw 0.9s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+              stroke-dasharray: var(--line-length, 9999);
+              stroke-dashoffset: var(--line-length, 9999);
             }
-            .line-anim .recharts-line-dots {
+            .line-anim.line-ready .recharts-line-curve {
+              animation: lineDraw 0.9s linear forwards;
+            }
+            .line-anim .line-dot-anim {
               opacity: 0;
-              animation: chartFadeIn 0.4s ease-out 0.75s forwards;
+            }
+            .line-anim.line-ready .line-dot-anim {
+              animation: dotFadeIn 0.2s ease-out forwards;
             }
           `}</style>
 
@@ -725,7 +819,12 @@ export default function StatsPage() {
                     <p className="text-sm font-medium">{t("stats.no_data")}</p>
                   </div>
                 ) : (
-                  <div key={monthlyAnimKey} className={monthlyChartType === "bar" ? "bar-anim" : "line-anim"} style={{ width: "100%", height: "100%" }}>
+                  <div
+                    key={monthlyAnimKey}
+                    ref={monthlyChartType === "line" ? monthlyLineContainerRef : null}
+                    className={`${monthlyChartType === "bar" ? "bar-anim" : "line-anim"}${monthlyChartType === "line" && monthlyLineReady ? " line-ready" : ""}`}
+                    style={{ width: "100%", height: "100%" }}
+                  >
                     <ResponsiveContainer width="100%" height="100%">
                       {monthlyChartType === "line" ? (
                         <LineChart data={monthlyData} margin={{ top: 40, right: 30, left: 10, bottom: 20 }}>
@@ -734,7 +833,7 @@ export default function StatsPage() {
                           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                           <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} width={65} domain={[0, 'auto']} tickFormatter={(v: any) => v.toLocaleString()} />
                           <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={expenditureTooltipFormatter} labelFormatter={monthlyTooltipLabelFormatter} />
-                          <Line type="linear" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} isAnimationActive={false} />
+                          <Line type="linear" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={monthlyLineDot} isAnimationActive={false} />
                         </LineChart>
                       ) : (
                         <BarChart data={monthlyData} margin={{ top: 20, right: 30, left: 10, bottom: 4 }} barCategoryGap="30%">
@@ -809,7 +908,12 @@ export default function StatsPage() {
               </div>
             </CardHeader>
             <CardContent className="h-64 px-2 pb-4 pt-0">
-              <div key={yearlyAnimKey} className={yearlyChartType === "bar" ? "bar-anim" : "line-anim"} style={{ width: "100%", height: "100%" }}>
+              <div
+                key={yearlyAnimKey}
+                ref={yearlyChartType === "line" ? yearlyLineContainerRef : null}
+                className={`${yearlyChartType === "bar" ? "bar-anim" : "line-anim"}${yearlyChartType === "line" && yearlyLineReady ? " line-ready" : ""}`}
+                style={{ width: "100%", height: "100%" }}
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   {yearlyChartType === "line" ? (
                     <LineChart data={yearlyData} margin={{ top: 20, right: 16, left: 8, bottom: 4 }}>
@@ -838,7 +942,7 @@ export default function StatsPage() {
                         formatter={expenditureTooltipFormatter}
                         labelFormatter={monthTooltipLabelFormatter}
                       />
-                      <Line type="linear" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }} isAnimationActive={false} />
+                      <Line type="linear" dataKey="amount" stroke="#3b82f6" strokeWidth={2} dot={yearlyLineDot} isAnimationActive={false} />
                     </LineChart>
                   ) : (
                     <BarChart data={yearlyData} margin={{ top: 20, right: 16, left: 8, bottom: 4 }} barCategoryGap="30%">
