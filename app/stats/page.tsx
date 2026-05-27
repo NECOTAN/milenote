@@ -173,7 +173,7 @@ function StatRow({
         <span className="text-sm font-semibold text-slate-600">{label}</span>
       </div>
       <div className="flex items-baseline gap-1">
-        <span className="text-lg font-black text-slate-800 tabular-nums">{value}</span>
+        <span className="text-lg font-bold text-slate-800 tabular-nums tracking-wider">{value}</span>
         {unit && <span className="text-xs font-bold text-slate-400">{unit}</span>}
       </div>
     </div>
