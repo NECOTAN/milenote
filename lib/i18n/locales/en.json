@@ -222,7 +222,14 @@
     "unit_count_times": "times",
     "unit_yen_per_liter": "¥/L",
     "unit_kg": "kg",
-    "unit_km": "km"
+    "unit_km": "km",
+    "charge_summary": "Charging Summary",
+    "total_charge": "Total Charge",
+    "charge_count": "Charges",
+    "total_charge_cost": "Total Charge Cost",
+    "avg_charge_unit_price": "Avg. Unit Price",
+    "unit_kwh": "kWh",
+    "unit_yen_per_kwh": "¥/kWh"
   },
   "mypage": {
     "title": "My Page",

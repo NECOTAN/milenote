@@ -222,7 +222,14 @@
     "unit_count_times": "回",
     "unit_yen_per_liter": "円/L",
     "unit_kg": "kg",
-    "unit_km": "km"
+    "unit_km": "km",
+    "charge_summary": "充電サマリー",
+    "total_charge": "累計充電量",
+    "charge_count": "充電回数",
+    "total_charge_cost": "累計充電代",
+    "avg_charge_unit_price": "平均単価",
+    "unit_kwh": "kWh",
+    "unit_yen_per_kwh": "円/kWh"
   },
   "mypage": {
     "title": "マイページ",

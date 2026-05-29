@@ -9,7 +9,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   BarChart, Bar
 } from "recharts"
-import { Globe, Moon, PieChart as PieIcon, BarChart3, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, LineChart as LineChartIcon, Fuel, Hash, Receipt, TrendingUp, Leaf, Droplet } from "lucide-react"
+import { Globe, Moon, PieChart as PieIcon, BarChart3, ChevronLeft, ChevronRight, CalendarDays, RotateCcw, LineChart as LineChartIcon, Fuel, Hash, Receipt, TrendingUp, Leaf, Droplet, Zap, BatteryCharging } from "lucide-react"
 import { useTranslation } from "@/lib/i18n"
 
 const CATEGORY_MAP_COLORFUL: Record<string, { color: string }> = {
@@ -441,8 +441,9 @@ export default function StatsPage() {
   const moonPercent = Math.min(((totalOdo / distanceToMoon) * 100), 100).toFixed(1)
   const remainingMoonDist = Math.max(distanceToMoon - totalOdo, 0)
 
-  // 給油系統計
-  const fuelRecords = records.filter(r => r.category === "fuel")
+  // 給油系統計（EV車の充電記録は別集計するためここでは除外）
+  const isEvRecord = (r: Record_) => (r.car_id ? carFuelTypes.get(r.car_id) : null) === "EV"
+  const fuelRecords = records.filter(r => r.category === "fuel" && !isEvRecord(r))
   const totalFuelAmount = fuelRecords.reduce((sum, r) => {
     const liters = r.fuel_amount ? parseFloat(String(r.fuel_amount)) : 0
     return sum + (isNaN(liters) ? 0 : liters)
@@ -459,6 +460,16 @@ export default function StatsPage() {
       : CO2_COEFFICIENT_DEFAULT
     return sum + liters * coefficient
   }, 0)
+
+  // EV充電系統計（EV車の給油カテゴリ記録を kWh 建てで集計）
+  const chargeRecords = records.filter(r => r.category === "fuel" && isEvRecord(r))
+  const totalChargeAmount = chargeRecords.reduce((sum, r) => {
+    const kwh = r.fuel_amount ? parseFloat(String(r.fuel_amount)) : 0
+    return sum + (isNaN(kwh) ? 0 : kwh)
+  }, 0)
+  const chargeCount = chargeRecords.length
+  const totalChargeCost = chargeRecords.reduce((sum, r) => sum + r.amount, 0)
+  const avgChargeUnitPrice = totalChargeAmount > 0 ? totalChargeCost / totalChargeAmount : 0
 
   // Recharts の <XAxis>/<YAxis>/<Tooltip> 等は内部で memo 比較しており、tickFormatter / formatter の参照が
   // 毎レンダーで変わると axis 設定が replaceXAxis として Redux に再 dispatch され、folded line の points 参照が
@@ -735,6 +746,49 @@ export default function StatsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* 充電サマリーカード（EV車の充電記録がある場合のみ表示） */}
+          {chargeCount > 0 && (
+            <Card className="border-none shadow-sm bg-white">
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-sm font-bold flex items-center gap-2 text-slate-600">
+                  <BatteryCharging size={16} /> {t("stats.charge_summary")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 pt-0">
+                <div className="divide-y divide-slate-100">
+                  <StatRow
+                    icon={Zap}
+                    iconColor="text-sky-500"
+                    label={t("stats.total_charge")}
+                    value={totalChargeAmount.toFixed(1)}
+                    unit={t("stats.unit_kwh")}
+                  />
+                  <StatRow
+                    icon={Hash}
+                    iconColor="text-indigo-500"
+                    label={t("stats.charge_count")}
+                    value={chargeCount.toLocaleString()}
+                    unit={t("stats.unit_count_times")}
+                  />
+                  <StatRow
+                    icon={Receipt}
+                    iconColor="text-orange-500"
+                    label={t("stats.total_charge_cost")}
+                    value={`¥${totalChargeCost.toLocaleString()}`}
+                    unit=""
+                  />
+                  <StatRow
+                    icon={TrendingUp}
+                    iconColor="text-rose-500"
+                    label={t("stats.avg_charge_unit_price")}
+                    value={Math.round(avgChargeUnitPrice).toLocaleString()}
+                    unit={t("stats.unit_yen_per_kwh")}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* 費用分析タブ */}
