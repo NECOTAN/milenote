@@ -413,6 +413,22 @@ function RecordsPageInner() {
     setCarId(firstCarId)
   }
 
+  // 車の総走行距離(current_odo)を残っている記録の最大ODOに合わせて再計算する
+  // 記録の削除・編集で過大なODO値（桁間違いなど）が残らないようにするための処理
+  // 記録が無くなった場合や記録より大きい場合は購入時ODO(purchase_odo)を下限とする
+  const recalcCarOdo = async (targetCarId: string) => {
+    const targetCar = cars.find(c => c.id === targetCarId)
+    const baseOdo = targetCar?.purchase_odo || 0
+    const { data: remaining } = await supabase
+      .from("records")
+      .select("odo_at_record")
+      .eq("car_id", targetCarId)
+    const maxRecordOdo = remaining && remaining.length > 0
+      ? Math.max(...remaining.map((r: { odo_at_record: number | null }) => r.odo_at_record ?? 0))
+      : 0
+    await supabase.from("cars").update({ current_odo: Math.max(maxRecordOdo, baseOdo) }).eq("id", targetCarId)
+  }
+
   // 記録データの保存処理
   const handleAddRecord = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -443,9 +459,7 @@ function RecordsPageInner() {
 
     if (recordError) return toast.error(t("common.error_occurred") + ": " + recordError.message)
 
-    if (targetCar && odoAtRecord && parseInt(odoAtRecord) > targetCar.current_odo) {
-      await supabase.from("cars").update({ current_odo: parseInt(odoAtRecord) }).eq("id", carId)
-    }
+    await recalcCarOdo(carId)
 
     toast.success(t("records.saved"))
     resetForm()
@@ -528,6 +542,7 @@ function RecordsPageInner() {
     if (error) {
       toast.error(t("common.error_occurred") + ": " + error.message)
     } else {
+      await recalcCarOdo(carId)
       toast.success(t("records.updated"))
       resetForm()
       fetchData()
@@ -539,10 +554,12 @@ function RecordsPageInner() {
     const confirmed = window.confirm(t("records.confirm_delete"))
     if (!confirmed) return
 
+    const targetRecord = records.find(r => r.id === recordId)
     const { error } = await supabase.from("records").delete().eq("id", recordId)
     if (error) {
       toast.error(t("common.delete_failed") + ": " + error.message)
     } else {
+      if (targetRecord) await recalcCarOdo(targetRecord.car_id)
       toast.success(t("records.deleted"))
       fetchData()
     }
