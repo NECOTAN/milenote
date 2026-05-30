@@ -286,6 +286,7 @@
   "categories": {
     "fuel": "Fuel",
     "maintenance": "Maint.",
+    "repair": "Repair",
     "custom": "Custom",
     "highway": "Toll",
     "tax": "Tax",
@@ -308,6 +309,10 @@
     "吸排気系（マフラー等）": "Exhaust / Intake",
     "足回り（ホイール・車高調等）": "Suspension / Wheels",
     "電装系（オーディオ等）": "Electronics",
+    "故障修理": "Breakdown Repair",
+    "板金・塗装": "Bodywork / Paint",
+    "事故対応・レッカー": "Accident Response / Towing",
+    "リコール対応": "Recall Service",
     "自賠責保険": "Compulsory Liability",
     "任意保険": "Voluntary Insurance",
     "自動車税": "Automobile Tax",
