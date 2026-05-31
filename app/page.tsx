@@ -284,7 +284,7 @@ export default function Home() {
                 {/* 常に表示される1件目（右上に展開トグルボタン配置） */}
                 {alerts.slice(0, 1).map((alert) => (
                   <div key={alert.id} className="relative">
-                    <Card className={`border-none shadow-sm bg-white ${alert.isUrgent ? 'ring-1 ring-red-100' : ''}`}>
+                    <Card className="border-none shadow-sm bg-white">
                       <CardContent className="p-4 flex items-start gap-4">
                         <div className={`p-3 rounded-2xl shrink-0 ${alert.isUrgent ? 'bg-red-50' : 'bg-slate-50'} ${alert.color}`}>
                           <alert.icon size={24} />
@@ -335,7 +335,7 @@ export default function Home() {
 
                 {/* PC版初期表示用（2〜4件目）。モバイルでは非表示、アニメーション対象外 */}
                 {alerts.slice(1, 4).map((alert) => (
-                  <Card key={`pc-view-${alert.id}`} className={`hidden lg:block border-none shadow-sm bg-white ${alert.isUrgent ? 'ring-1 ring-red-100' : ''}`}>
+                  <Card key={`pc-view-${alert.id}`} className="hidden lg:block border-none shadow-sm bg-white">
                     <CardContent className="p-4 flex items-start gap-4">
                       <div className={`p-3 rounded-2xl shrink-0 ${alert.isUrgent ? 'bg-red-50' : 'bg-slate-50'} ${alert.color}`}>
                         <alert.icon size={24} />
@@ -380,9 +380,7 @@ export default function Home() {
                           return (
                             <Card
                               key={`anim-${alert.id}`}
-                              className={`${displayClass} border-none shadow-sm bg-white transition-all duration-400 ease-out ${
-                                alert.isUrgent ? 'ring-1 ring-red-100' : ''
-                              } ${showAllAlerts ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
+                              className={`${displayClass} border-none shadow-sm bg-white transition-all duration-400 ease-out ${showAllAlerts ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}
                               style={{ transitionDelay: showAllAlerts ? `${i * 70 + 100}ms` : '0ms' }}
                             >
                               <CardContent className="p-4 flex items-start gap-4">
