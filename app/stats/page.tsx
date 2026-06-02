@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import type { ReactElement } from "react"
 import { createClient } from "@/utils/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -518,9 +519,45 @@ export default function StatsPage() {
     `¥${Number(value).toLocaleString()}`,
     t(`categories.${name}`),
   ], [t])
-  const categoryLegendFormatter = useCallback((value: any) => (
-    <span className="text-xs font-bold text-slate-600 mr-2">{t(`categories.${value}`)}</span>
+  // 凡例ラベルの整形（カテゴリキーを翻訳して表示）
+  const renderCategoryLegendLabel = useCallback((value: string) => (
+    <span className="text-xs font-bold text-slate-600">{t(`categories.${value}`)}</span>
   ), [t])
+  // 凡例ラベルの整形
+  const renderRawLegendLabel = useCallback((value: string) => (
+    <span className="text-xs font-bold text-slate-600">{value}</span>
+  ), [])
+  // 凡例を列揃えのグリッドで描画し、ブロック全体を中央寄せする
+  // formatLabel でラベルの整形方法を切り替える
+  const renderGridLegend = useCallback(
+    (formatLabel: (value: string) => ReactElement) => {
+      const GridLegend = ({ payload }: { payload?: readonly { value?: string | number; color?: string }[] }) => (
+        <ul
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(90px, max-content))',
+            justifyContent: 'center',
+            gap: '8px 20px',
+            listStyle: 'none',
+            margin: 0,
+            padding: '8px 16px 12px',
+          }}
+        >
+          {payload?.map((entry, index) => (
+            <li key={`legend-${index}`} className="flex items-center gap-1.5">
+              <span
+                className="inline-block shrink-0 rounded-full"
+                style={{ width: 8, height: 8, backgroundColor: entry.color }}
+              />
+              {formatLabel(String(entry.value))}
+            </li>
+          ))}
+        </ul>
+      )
+      return GridLegend
+    },
+    [],
+  )
   // 折れ線グラフのドット描画（線の進行に合わせて各点をフェードイン）
   // dot prop の参照が毎レンダーで変わると Recharts が内部で要素を作り直しアニメーションが再生されるため、useMemo で安定化する
   const yearlyLastValidIndex = useMemo(
@@ -900,8 +937,7 @@ export default function StatsPage() {
                           {/* Recharts のコールバック型が複雑なため any を許容 */}
                           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                           <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={(value: any) => [`¥${Number(value).toLocaleString()}`, t("stats.amount")]} />
-                          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                          <Legend verticalAlign="bottom" height={36} iconType="circle" formatter={(value: any) => <span className="text-xs font-bold text-slate-600 mr-2">{value}</span>} />
+                          <Legend verticalAlign="bottom" content={renderGridLegend(renderRawLegendLabel)} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
@@ -961,7 +997,7 @@ export default function StatsPage() {
                           <XAxis dataKey="month" fontSize={10} axisLine={false} tickLine={false} dy={10} tick={{ fill: '#94a3b8' }} tickFormatter={monthFormatter} />
                           <YAxis fontSize={10} axisLine={false} tickLine={false} tick={{ fill: '#94a3b8' }} width={65} tickFormatter={numberTickFormatter} />
                           <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} formatter={categoryBarTooltipFormatter} labelFormatter={monthlyTooltipLabelFormatter} />
-                          <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: 11, paddingTop: 4 }} formatter={categoryLegendFormatter} />
+                          <Legend verticalAlign="bottom" content={renderGridLegend(renderCategoryLegendLabel)} />
                           {monthlyCategoriesPresent.map((cat) => (
                             <Bar
                               key={cat}
@@ -1089,7 +1125,7 @@ export default function StatsPage() {
                         formatter={categoryBarTooltipFormatter}
                         labelFormatter={monthTooltipLabelFormatter}
                       />
-                      <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: 11, paddingTop: 4 }} formatter={categoryLegendFormatter} />
+                      <Legend verticalAlign="bottom" content={renderGridLegend(renderCategoryLegendLabel)} />
                       {yearlyCategoriesPresent.map((cat) => (
                         <Bar
                           key={cat}
