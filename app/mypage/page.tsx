@@ -234,8 +234,8 @@ export default function MyPage() {
           {/* 下部：保存ボタンエリア */}
           <div className="border-t border-slate-100 px-6 py-3 flex justify-between items-center">
             <p className="text-[11px] text-slate-500 font-medium">{t("mypage.save_note")}</p>
-            <Button onClick={handleUpdate} disabled={saving} variant="outline" className="px-6 h-8 text-xs font-bold border-slate-200 hover:bg-slate-100 hover:text-slate-900 shadow-sm">
-              {saving ? t("common.saving") : t("common.save")}
+            <Button onClick={handleUpdate} disabled={saving} className="px-6 h-9 text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 rounded-lg shadow-sm">
+              {saving ? t("common.saving") : t("mypage.save_button")}
             </Button>
           </div>
         </Card>
@@ -299,8 +299,8 @@ export default function MyPage() {
           {/* 下部：保存ボタンエリア */}
           <div className="border-t border-slate-100 px-6 py-3 flex justify-between items-center">
             <p className="text-[11px] text-slate-500 font-medium">{t("mypage.save_together_note")}</p>
-            <Button onClick={handleUpdate} disabled={saving} variant="outline" className="px-6 h-8 text-xs font-bold border-slate-200 hover:bg-slate-100 hover:text-slate-900 shadow-sm">
-              {saving ? t("common.saving") : t("common.save")}
+            <Button onClick={handleUpdate} disabled={saving} className="px-6 h-9 text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 rounded-lg shadow-sm">
+              {saving ? t("common.saving") : t("mypage.save_button")}
             </Button>
           </div>
         </Card>
@@ -448,8 +448,8 @@ export default function MyPage() {
           {/* 下部：保存ボタンエリア */}
           <div className="border-t border-slate-100 px-6 py-3 flex justify-between items-center">
             <p className="text-[11px] text-slate-500 font-medium">{t("mypage.order_local_note")}</p>
-            <Button onClick={handleUpdate} disabled={saving} variant="outline" className="px-6 h-8 text-xs font-bold border-slate-200 hover:bg-slate-100 hover:text-slate-900 shadow-sm">
-              {saving ? t("common.saving") : t("common.save")}
+            <Button onClick={handleUpdate} disabled={saving} className="px-6 h-9 text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 rounded-lg shadow-sm">
+              {saving ? t("common.saving") : t("mypage.save_button")}
             </Button>
           </div>
         </Card>

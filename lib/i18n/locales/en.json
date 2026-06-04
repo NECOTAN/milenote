@@ -249,6 +249,7 @@
     "display_name": "Display Name",
     "user_id": "User ID",
     "save_note": "Changes are not applied until you press Save.",
+    "save_button": "Save",
     "maintenance_settings": "Maintenance Schedule",
     "maintenance_desc": "Set distance and time thresholds for maintenance alerts on the home screen. Use the toggle to turn alerts on or off per item.",
     "notify_on": "Notify",

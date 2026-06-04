@@ -249,6 +249,7 @@
     "display_name": "表示名",
     "user_id": "ユーザーID",
     "save_note": "変更内容は保存ボタンを押すまで適用されません。",
+    "save_button": "保存する",
     "maintenance_settings": "メンテナンス基準",
     "maintenance_desc": "ホーム画面に表示されるアラートの基準（距離・期間）を部品ごとに設定します。スイッチで項目ごとに通知のオン/オフを切り替えられます。",
     "notify_on": "通知する",
