@@ -73,6 +73,8 @@ export default function Home() {
           carsData.forEach(car => {
             Object.keys(maintSettings).forEach(maintName => {
               const setting = maintSettings[maintName]
+              // 通知がオフの項目はアラートを生成しない（enabled未設定は後方互換でオン扱い）
+              if (setting.enabled === false) return;
               const style = MAINT_STYLE_CONFIG[maintName] || { icon: Wrench, color: "text-slate-500" }
               const maintRecords = recordsData.filter(r => r.car_id === car.id && r.sub_category === maintName).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Switch } from "@/components/ui/switch"
 import { User, LogOut, Save, Settings, Wrench, ArrowUp, ArrowDown, LayoutTemplate, Globe, Accessibility } from "lucide-react"
 import { toast } from "sonner"
 import { useTranslation } from "@/lib/i18n"
@@ -102,6 +103,16 @@ export default function MyPage() {
       [key]: {
         ...prev[key],
         [field]: parseInt(value) || 0
+      }
+    }))
+  }
+
+  const handleMaintToggle = (key: string, enabled: boolean) => {
+    setMaintSettings((prev: any) => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        enabled
       }
     }))
   }
@@ -245,15 +256,24 @@ export default function MyPage() {
             {/* 右側：入力フォーム */}
             <div className="md:w-2/3 p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                {Object.keys(DEFAULT_MAINT_SETTINGS).map((key) => (
+                {Object.keys(DEFAULT_MAINT_SETTINGS).map((key) => {
+                  const isEnabled = maintSettings[key]?.enabled !== false
+                  return (
                   <div key={key} className="space-y-2">
-                    <Label className="text-xs font-bold text-slate-700">{t(`maintenance_items.${key}`)}</Label>
-                    <div className="flex gap-3">
+                    <div className="flex items-center justify-between">
+                      <Label className={`text-xs font-bold ${isEnabled ? "text-slate-700" : "text-slate-400"}`}>{t(`maintenance_items.${key}`)}</Label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-slate-400">{isEnabled ? t("mypage.notify_on") : t("mypage.notify_off")}</span>
+                        <Switch checked={isEnabled} onCheckedChange={(v) => handleMaintToggle(key, v)} />
+                      </div>
+                    </div>
+                    <div className={`flex gap-3 transition-opacity ${isEnabled ? "" : "opacity-40"}`}>
                       <div className="relative flex-1">
                         <Input
                           type="number"
                           value={maintSettings[key]?.km || ""}
                           onChange={(e) => handleMaintChange(key, "km", e.target.value)}
+                          disabled={!isEnabled}
                           className="h-9 text-sm bg-white border-slate-200 pr-8 focus-visible:ring-1 focus-visible:ring-slate-300"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">{t("common.km_unit")}</span>
@@ -263,13 +283,15 @@ export default function MyPage() {
                           type="number"
                           value={maintSettings[key]?.months || ""}
                           onChange={(e) => handleMaintChange(key, "months", e.target.value)}
+                          disabled={!isEnabled}
                           className="h-9 text-sm bg-white border-slate-200 pr-10 focus-visible:ring-1 focus-visible:ring-slate-300"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none">{t("common.months_unit")}</span>
                       </div>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           </div>
