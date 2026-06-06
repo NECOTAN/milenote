@@ -8,10 +8,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { User, LogOut, Save, Settings, Wrench, ArrowUp, ArrowDown, LayoutTemplate, Globe, Accessibility } from "lucide-react"
+import { User, LogOut, Save, Settings, Wrench, ArrowUp, ArrowDown, LayoutTemplate, Globe, Accessibility, Download } from "lucide-react"
 import { toast } from "sonner"
 import { useTranslation } from "@/lib/i18n"
 import type { Locale } from "@/lib/i18n"
+import { recordsToCsv, downloadCsv, buildExportFilename } from "@/lib/csvExport"
+import type { ExportRecord } from "@/lib/csvExport"
 
 const DEFAULT_MAINT_SETTINGS = {
   "オイル交換": { km: 5000, months: 6 },
@@ -28,6 +30,7 @@ export default function MyPage() {
   const [isColorful, setIsColorful] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const router = useRouter()
   const supabase = createClient()
   const { t, locale, setLocale } = useTranslation()
@@ -129,6 +132,35 @@ export default function MyPage() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push("/login")
+  }
+
+  const handleExportCsv = async () => {
+    setExporting(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data, error } = await supabase
+        .from("records")
+        .select("date, category, sub_category, amount, odo_at_record, fuel_amount, memo, cars(name, fuel_type)")
+        .eq("user_id", user.id)
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false })
+
+      if (error) {
+        toast.error(t("common.error_occurred") + ": " + error.message)
+        return
+      }
+      const records = (data || []) as unknown as ExportRecord[]
+      if (records.length === 0) {
+        toast.error(t("mypage.export_no_data"))
+        return
+      }
+      const csv = recordsToCsv(records, t, locale)
+      downloadCsv(buildExportFilename(), csv)
+      toast.success(t("mypage.export_success"))
+    } finally {
+      setExporting(false)
+    }
   }
 
   if (loading) return (
@@ -451,6 +483,33 @@ export default function MyPage() {
             <Button onClick={handleUpdate} disabled={saving} className="shrink-0 px-4 h-8 text-[11px] font-bold bg-slate-900 text-white hover:bg-slate-800 rounded-lg shadow-sm">
               {saving ? t("common.saving") : t("mypage.save_button")}
             </Button>
+          </div>
+        </Card>
+
+        {/* データのエクスポート */}
+        <Card className="border border-slate-200 shadow-sm bg-white overflow-hidden rounded-xl">
+          <div className="md:flex">
+            {/* 左側：説明 */}
+            <div className="md:w-1/3 p-6 border-b md:border-b-0 md:border-r border-slate-100 bg-white">
+              <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-2">
+                <Download size={18} className="text-slate-500" /> {t("mypage.export")}
+              </h2>
+              <p className="text-xs text-slate-500 leading-relaxed mb-4">
+                {t("mypage.export_desc")}
+              </p>
+            </div>
+
+            {/* 右側：エクスポートボタン */}
+            <div className="md:w-2/3 p-6 flex items-center">
+              <Button
+                onClick={handleExportCsv}
+                disabled={exporting}
+                className="px-5 h-10 text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 rounded-lg shadow-sm"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                {exporting ? t("mypage.exporting") : t("mypage.export_button")}
+              </Button>
+            </div>
           </div>
         </Card>
       </div>
