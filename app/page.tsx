@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { useTranslation, formatDateLocale, formatMonthsPassedLocale } from "@/lib/i18n"
+import { getCarImageStyle } from "@/utils/carImage"
 
 const CATEGORY_MAP: Record<string, { color: string }> = {
   fuel: { color: "#3b82f6" },
@@ -485,8 +486,8 @@ export default function Home() {
             <div className="space-y-4">
               {cars.map((car) => (
                 <Card key={car.id} className="border-none shadow-sm overflow-hidden bg-white p-0">
-                  <div className="relative h-48 bg-slate-800 w-full m-0 border-b border-slate-100">
-                    {car.image_url && <img src={car.image_url} alt={car.name} className="absolute inset-0 w-full h-full object-cover" />}
+                  <div className="relative aspect-[11/6] bg-slate-800 w-full m-0 border-b border-slate-100 overflow-hidden">
+                    {car.image_url && <img src={car.image_url} alt={car.name} className="absolute inset-0 w-full h-full object-cover" style={getCarImageStyle(car)} />}
                   </div>
                   <CardContent className="p-0 m-0">
                     <div className="px-4 pb-4 bg-white relative z-20">

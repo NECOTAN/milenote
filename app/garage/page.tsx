@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { createClient } from "@/utils/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,9 +10,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { CarFront, Plus, X, ListTodo, ExternalLink, Camera, Pencil, Trash2, AlertTriangle } from "lucide-react"
+import { CarFront, Plus, X, ListTodo, ExternalLink, Camera, Pencil, Trash2, AlertTriangle, Move } from "lucide-react"
 import { toast } from "sonner"
 import { useTranslation, formatDateLocale, formatMonthsPassedLocale } from "@/lib/i18n"
+import {
+  getCarImageStyle,
+  clampImagePosition,
+  clampImageScale,
+  DEFAULT_IMAGE_POSITION_X,
+  DEFAULT_IMAGE_POSITION_Y,
+  DEFAULT_IMAGE_SCALE,
+  MIN_IMAGE_SCALE,
+  MAX_IMAGE_SCALE,
+} from "@/utils/carImage"
 
 const WISHLIST_GENRE_KEYS = [
   "ホイール", "マフラー・吸排気", "エアロ・外装", "足回り・車高調", "インテリア・内装", "その他"
@@ -46,6 +56,16 @@ export default function GaragePage() {
   // 削除確認モーダル用
   const [deleteCarTarget, setDeleteCarTarget] = useState<any | null>(null)
   const [deleteCarConfirmName, setDeleteCarConfirmName] = useState("")
+
+  // 画像の位置、ズーム調整モーダル用
+  const [adjustTarget, setAdjustTarget] = useState<any | null>(null)
+  const [adjustPosX, setAdjustPosX] = useState(DEFAULT_IMAGE_POSITION_X)
+  const [adjustPosY, setAdjustPosY] = useState(DEFAULT_IMAGE_POSITION_Y)
+  const [adjustScale, setAdjustScale] = useState(DEFAULT_IMAGE_SCALE)
+  const [savingPosition, setSavingPosition] = useState(false)
+  const previewRef = useRef<HTMLDivElement>(null)
+  const dragState = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null)
+
   const supabase = createClient()
   const { t, locale } = useTranslation()
 
@@ -347,7 +367,13 @@ export default function GaragePage() {
     const { data: { publicUrl } } = supabase.storage.from('cars').getPublicUrl(filePath)
 
     // cars テーブルの image_url を更新
-    const { error: updateError } = await supabase.from('cars').update({ image_url: publicUrl }).eq('id', carId)
+    // 写真を差し替えると前の位置、ズームは新しい画像に合わないため、中央、等倍に初期化する
+    const { error: updateError } = await supabase.from('cars').update({
+      image_url: publicUrl,
+      image_position_x: DEFAULT_IMAGE_POSITION_X,
+      image_position_y: DEFAULT_IMAGE_POSITION_Y,
+      image_scale: DEFAULT_IMAGE_SCALE,
+    }).eq('id', carId)
 
     toast.dismiss(toastId)
     if (updateError) {
@@ -355,6 +381,64 @@ export default function GaragePage() {
     } else {
       toast.success(t("garage.photo_set"))
       fetchData() // 画面を更新して写真を表示
+      // アップロード直後に位置・ズーム調整モーダルを開き、新しい画像をすぐ調整できるようにする
+      const baseCar = cars.find((c) => c.id === carId) || {}
+      handleStartAdjustImage({
+        ...baseCar,
+        id: carId,
+        image_url: publicUrl,
+        image_position_x: DEFAULT_IMAGE_POSITION_X,
+        image_position_y: DEFAULT_IMAGE_POSITION_Y,
+        image_scale: DEFAULT_IMAGE_SCALE,
+      })
+    }
+  }
+
+  // 画像の位置、ズーム調整モーダルを開く（既存ユーザーは NULL の可能性があるためデフォルトにフォールバック）
+  const handleStartAdjustImage = (car: any) => {
+    setAdjustTarget(car)
+    setAdjustPosX(car.image_position_x ?? DEFAULT_IMAGE_POSITION_X)
+    setAdjustPosY(car.image_position_y ?? DEFAULT_IMAGE_POSITION_Y)
+    setAdjustScale(car.image_scale ?? DEFAULT_IMAGE_SCALE)
+  }
+
+  // プレビュー上のドラッグで位置を調整する
+  const handleAdjustPointerDown = (e: React.PointerEvent) => {
+    e.currentTarget.setPointerCapture(e.pointerId)
+    dragState.current = { startX: e.clientX, startY: e.clientY, baseX: adjustPosX, baseY: adjustPosY }
+  }
+
+  const handleAdjustPointerMove = (e: React.PointerEvent) => {
+    if (!dragState.current || !previewRef.current) return
+    const rect = previewRef.current.getBoundingClientRect()
+    // ドラッグ量をプレビュー枠基準で % に換算（画像を掴んで動かす感覚にするため符号を反転）
+    const dxPct = ((e.clientX - dragState.current.startX) / rect.width) * 100
+    const dyPct = ((e.clientY - dragState.current.startY) / rect.height) * 100
+    setAdjustPosX(clampImagePosition(dragState.current.baseX - dxPct))
+    setAdjustPosY(clampImagePosition(dragState.current.baseY - dyPct))
+  }
+
+  const handleAdjustPointerUp = () => {
+    dragState.current = null
+  }
+
+  // 位置、ズームを cars テーブルに保存する
+  const handleSaveImagePosition = async () => {
+    if (!adjustTarget) return
+    setSavingPosition(true)
+    const payload = {
+      image_position_x: clampImagePosition(adjustPosX),
+      image_position_y: clampImagePosition(adjustPosY),
+      image_scale: clampImageScale(adjustScale),
+    }
+    const { error } = await supabase.from("cars").update(payload).eq("id", adjustTarget.id)
+    setSavingPosition(false)
+    if (error) {
+      toast.error(t("garage.db_update_failed"))
+    } else {
+      toast.success(t("garage.position_saved"))
+      setAdjustTarget(null)
+      fetchData()
     }
   }
 
@@ -495,21 +579,34 @@ export default function GaragePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {cars.map((car) => (
                 <Card key={car.id} className="border-none shadow-sm overflow-hidden bg-white p-0 relative group">
-                  {/* 画像アップロードボタン */}
-                  <Label className="absolute top-3 right-3 bg-black/40 hover:bg-black/70 text-white p-2 rounded-full cursor-pointer z-20 transition-all backdrop-blur-sm opacity-80 hover:opacity-100 shadow-lg">
-                    <Camera size={16} />
-                    <Input
-                      type="file"
-                      accept="image/jpeg, image/png, image/webp"
-                      className="hidden"
-                      onChange={(e) => handleImageUpload(car.id, e)}
-                    />
-                  </Label>
+                  <div className="absolute top-3 right-3 flex items-center gap-2 z-20">
+                    {/* 画像の位置、ズーム調整ボタン（画像が設定済みの場合のみ） */}
+                    {car.image_url && (
+                      <button
+                        type="button"
+                        onClick={() => handleStartAdjustImage(car)}
+                        className="bg-black/40 hover:bg-black/70 text-white p-2 rounded-full cursor-pointer transition-all backdrop-blur-sm opacity-80 hover:opacity-100 shadow-lg"
+                        title={t("garage.adjust_image")}
+                      >
+                        <Move size={16} />
+                      </button>
+                    )}
+                    {/* 画像アップロードボタン */}
+                    <Label className="bg-black/40 hover:bg-black/70 text-white p-2 rounded-full cursor-pointer transition-all backdrop-blur-sm opacity-80 hover:opacity-100 shadow-lg">
+                      <Camera size={16} />
+                      <Input
+                        type="file"
+                        accept="image/jpeg, image/png, image/webp"
+                        className="hidden"
+                        onChange={(e) => handleImageUpload(car.id, e)}
+                      />
+                    </Label>
+                  </div>
 
-                  <div className="relative h-48 bg-slate-800 w-full m-0 border-b border-slate-100">
+                  <div className="relative aspect-[11/6] bg-slate-800 w-full m-0 border-b border-slate-100 overflow-hidden">
                     {/* 登録済みの画像がある場合は表示 */}
                     {car.image_url && (
-                      <img src={car.image_url} alt={car.name} className="absolute inset-0 w-full h-full object-cover" />
+                      <img src={car.image_url} alt={car.name} className="absolute inset-0 w-full h-full object-cover" style={getCarImageStyle(car)} />
                     )}
                   </div>
 
@@ -624,6 +721,65 @@ export default function GaragePage() {
                     onClick={handleDeleteCar}
                   >
                     {t("common.delete_action")}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* 画像の位置、ズーム調整モーダル */}
+        {adjustTarget && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setAdjustTarget(null)}>
+            <Card className="border-none shadow-2xl bg-white max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center gap-3 text-slate-800">
+                  <Move size={20} />
+                  <h2 className="text-lg font-extrabold">{t("garage.adjust_image_title")}</h2>
+                </div>
+                <p className="text-xs text-slate-500 font-medium">{t("garage.adjust_image_hint")}</p>
+
+                {/* プレビュー */}
+                <div
+                  ref={previewRef}
+                  className="relative aspect-[11/6] w-full bg-slate-800 rounded-lg overflow-hidden cursor-move select-none touch-none"
+                  onPointerDown={handleAdjustPointerDown}
+                  onPointerMove={handleAdjustPointerMove}
+                  onPointerUp={handleAdjustPointerUp}
+                  onPointerCancel={handleAdjustPointerUp}
+                >
+                  <img
+                    src={adjustTarget.image_url}
+                    alt={adjustTarget.name}
+                    draggable={false}
+                    className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                    style={getCarImageStyle({ image_position_x: adjustPosX, image_position_y: adjustPosY, image_scale: adjustScale })}
+                  />
+                </div>
+
+                {/* ズームスライダー */}
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-xs font-bold text-slate-600">{t("garage.zoom")}</Label>
+                    <span className="text-xs font-bold text-slate-400 tabular-nums">{adjustScale.toFixed(1)}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={MIN_IMAGE_SCALE}
+                    max={MAX_IMAGE_SCALE}
+                    step={0.1}
+                    value={adjustScale}
+                    onChange={(e) => setAdjustScale(clampImageScale(parseFloat(e.target.value)))}
+                    className="w-full accent-slate-800 cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <Button variant="outline" className="flex-1 font-bold" onClick={() => setAdjustTarget(null)}>
+                    {t("common.cancel")}
+                  </Button>
+                  <Button className="flex-1 font-bold" disabled={savingPosition} onClick={handleSaveImagePosition}>
+                    {savingPosition ? t("common.saving") : t("common.save")}
                   </Button>
                 </div>
               </CardContent>
