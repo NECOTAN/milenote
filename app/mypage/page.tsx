@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
+import type { ReactNode, PointerEvent as ReactPointerEvent } from "react"
 import { createClient } from "@/utils/supabase"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -8,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { User, LogOut, Save, Settings, Wrench, ArrowUp, ArrowDown, LayoutTemplate, Globe, Accessibility, Download } from "lucide-react"
+import { User, LogOut, Save, Settings, Wrench, LayoutTemplate, Globe, Accessibility, Download, Car, Bell, BarChart3 } from "lucide-react"
 import { toast } from "sonner"
 import { useTranslation } from "@/lib/i18n"
 import type { Locale } from "@/lib/i18n"
@@ -122,13 +123,58 @@ export default function MyPage() {
     }))
   }
 
-  const moveHomeOrder = (index: number, direction: -1 | 1) => {
-    const newOrder = [...homeOrder]
-    if (index + direction < 0 || index + direction >= newOrder.length) return
-    const temp = newOrder[index]
-    newOrder[index] = newOrder[index + direction]
-    newOrder[index + direction] = temp
-    setHomeOrder(newOrder)
+  const sectionIcons: Record<string, ReactNode> = {
+    cars: <Car size={16} />,
+    alerts: <Bell size={16} />,
+    summary: <BarChart3 size={16} />,
+  }
+
+  const [dragId, setDragId] = useState<string | null>(null)
+  const [dragOffset, setDragOffset] = useState(0)
+  const [targetIndex, setTargetIndex] = useState<number | null>(null)
+  // ドロップ直後の1フレームだけアニメーションを止め、位置の飛びを防ぐカード
+  const [justDroppedId, setJustDroppedId] = useState<string | null>(null)
+  const dragInfo = useRef<{ startY: number; startIndex: number; step: number } | null>(null)
+  const rowRefs = useRef<Array<HTMLDivElement | null>>([])
+
+  const handleDragStart = (e: ReactPointerEvent<HTMLDivElement>, index: number) => {
+    const el = rowRefs.current[index]
+    // カードの高さと行間（space-y-2 = 8px）を1段分の移動量とする
+    const step = el ? el.getBoundingClientRect().height + 8 : 56
+    dragInfo.current = { startY: e.clientY, startIndex: index, step }
+    setDragId(homeOrder[index])
+    setDragOffset(0)
+    setTargetIndex(index)
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  const handleDragMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!dragInfo.current) return
+    const { startY, startIndex, step } = dragInfo.current
+    const offset = e.clientY - startY
+    setDragOffset(offset)
+    const target = Math.max(0, Math.min(startIndex + Math.round(offset / step), homeOrder.length - 1))
+    setTargetIndex(target)
+  }
+
+  const handleDragEnd = () => {
+    const movedId = dragId
+    if (dragInfo.current && targetIndex !== null && targetIndex !== dragInfo.current.startIndex) {
+      const { startIndex } = dragInfo.current
+      setHomeOrder((prev) => {
+        const next = [...prev]
+        const [moved] = next.splice(startIndex, 1)
+        next.splice(targetIndex, 0, moved)
+        return next
+      })
+      // ドロップ直後はアニメーションを止めて、確定位置にそのまま着地させる
+      setJustDroppedId(movedId)
+      requestAnimationFrame(() => setJustDroppedId(null))
+    }
+    dragInfo.current = null
+    setDragId(null)
+    setDragOffset(0)
+    setTargetIndex(null)
   }
 
   const handleLogout = async () => {
@@ -449,33 +495,57 @@ export default function MyPage() {
 
             {/* 右側：並び替えUI */}
             <div className="md:w-2/3 p-6">
-              <div className="space-y-2 max-w-sm">
-                {homeOrder.map((sectionId, index) => (
-                  <div key={sectionId} className="flex items-center justify-between bg-white border border-slate-200 p-3 rounded-lg shadow-sm">
-                    <span className="text-sm font-bold text-slate-700">{t(`mypage.home_sections.${sectionId}`)}</span>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-7 w-7 text-slate-500 hover:text-slate-800 border-slate-200"
-                        onClick={() => moveHomeOrder(index, -1)}
-                        disabled={index === 0}
-                      >
-                        <ArrowUp size={14} />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-7 w-7 text-slate-500 hover:text-slate-800 border-slate-200"
-                        onClick={() => moveHomeOrder(index, 1)}
-                        disabled={index === homeOrder.length - 1}
-                      >
-                        <ArrowDown size={14} />
-                      </Button>
+              <div className="space-y-2 max-w-md">
+                {homeOrder.map((sectionId, index) => {
+                  const isDragging = dragId === sectionId
+                  // ドラッグ中の見た目の移動量を算出
+                  let translateY = 0
+                  if (isDragging) {
+                    translateY = dragOffset
+                  } else if (dragInfo.current && targetIndex !== null) {
+                    const { startIndex, step } = dragInfo.current
+                    // ドラッグ中のカードが入る隙間を作るため、間のカードをずらす
+                    if (startIndex < targetIndex && index > startIndex && index <= targetIndex) {
+                      translateY = -step
+                    } else if (startIndex > targetIndex && index < startIndex && index >= targetIndex) {
+                      translateY = step
+                    }
+                  }
+                  return (
+                    <div
+                      key={sectionId}
+                      ref={(el) => {
+                        rowRefs.current[index] = el
+                      }}
+                      onPointerDown={(e) => handleDragStart(e, index)}
+                      onPointerMove={handleDragMove}
+                      onPointerUp={handleDragEnd}
+                      onPointerCancel={handleDragEnd}
+                      role="button"
+                      aria-label={t("mypage.drag_handle")}
+                      style={{
+                        transform: isDragging ? `translateY(${translateY}px) scale(1.02)` : `translateY(${translateY}px)`,
+                        transition: isDragging || justDroppedId === sectionId ? "none" : "transform 200ms ease",
+                        zIndex: isDragging ? 10 : 0,
+                      }}
+                      className={`relative flex items-center gap-3 bg-white border p-3 rounded-lg select-none touch-none cursor-grab active:cursor-grabbing ${
+                        isDragging
+                          ? "border-slate-400 shadow-lg ring-2 ring-slate-300"
+                          : "border-slate-200 shadow-sm"
+                      }`}
+                    >
+                      {/* セクションアイコン */}
+                      <span className="flex items-center justify-center h-8 w-8 shrink-0 rounded-lg bg-slate-100 text-slate-600">
+                        {sectionIcons[sectionId]}
+                      </span>
+                      {/* ラベル */}
+                      <span className="flex-1 min-w-0 text-sm font-bold text-slate-700 truncate">{t(`mypage.home_sections.${sectionId}`)}</span>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
+              {/* 上が一番上に表示される旨の補足 */}
+              <p className="mt-3 text-[11px] text-slate-400 font-medium">{t("mypage.home_order_hint")}</p>
             </div>
           </div>
 
